@@ -1,8 +1,8 @@
 {
     "sound": true,
     "language": "Русский",
-    "skin_ball": "ball3.png",
-    "skin_basket": "basket3.png",
+    "skin_ball": "ball4.png",
+    "skin_basket": "basket2.png",
     "inventory_balls": [
         "ball1.png",
         "ball2.png",
