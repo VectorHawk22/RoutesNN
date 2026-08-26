@@ -38,6 +38,9 @@ class GameScreen(Screen):
         self._flash_timer = 0
         self._flash_color = (0, 0, 0)
 
+        self._idle_timer = 0
+        self._idle_threshold = 600
+
     def _build_nav(self):
         tr = self.app.translations[self.app.current_lang]
         self.nav_buttons = [
@@ -62,6 +65,11 @@ class GameScreen(Screen):
         self._update_button_text()
         self._build_nav()
 
+    def _reset_idle_timer(self):
+        self._idle_timer = 0
+        for court in (self.court_success, self.court_fail):
+            court.set_idle_ball_man(False)
+
     def _update_button_text(self):
         tr = self.app.translations[self.app.current_lang]
         if self.game_state == "idle":
@@ -75,6 +83,7 @@ class GameScreen(Screen):
             self.btn_click.bg_color = (173, 216, 230)
 
     def _on_button_click(self):
+        self._reset_idle_timer()
         if self.game_state == "idle":
             self._start_challenge()
         elif self.game_state == "challenging":
@@ -131,6 +140,12 @@ class GameScreen(Screen):
 
         self.court_success.update()
         self.court_fail.update()
+
+        if self.game_state == "idle" and not self.court_success.is_animating and not self.court_fail.is_animating:
+            self._idle_timer += 1
+            if self._idle_timer >= self._idle_threshold:
+                for court in (self.court_success, self.court_fail):
+                    court.set_idle_ball_man(True)
 
         if self._float_timer > 0:
             self._float_timer -= 1

@@ -10,6 +10,7 @@ class InventoryScreen(Screen):
         self.active_tab = "potions"
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.animation_dir = os.path.join(self.base_dir, "animation")
+        self.csball_dir = os.path.join(self.animation_dir, "custom_balls")
         self.images_dir = os.path.join(self.base_dir, "images")
 
         self.potion_img = None
@@ -48,8 +49,30 @@ class InventoryScreen(Screen):
         basket_skins = ["basket.png", "basket2.png", "basket3.png", "basket4.png"]
         bkball_skins = ["bkball1.png", "bkball2.png", "bkball3.png",
                         "bkball4.png", "bkball5.png", "bkball6.png"]
+        csball_skins = [f"csball{i}.png" for i in range(1, 9)]
         for fname in ball_skins + basket_skins + bkball_skins:
             path = os.path.join(self.animation_dir, fname)
+            if not os.path.exists(path):
+                continue
+            try:
+                img = PILImage.open(path).convert("RGBA")
+                mask = img.getchannel("A").point(lambda a: 255 if a > 100 else 0)
+                bbox = mask.getbbox()
+                if bbox:
+                    img = img.crop(bbox)
+                w, h = img.size
+                box = 56
+                scale = min(box / float(w), box / float(h))
+                nw = max(1, int(w * scale))
+                nh = max(1, int(h * scale))
+                img = img.resize((nw, nh), PILImage.Resampling.LANCZOS)
+                data = img.tobytes()
+                surf = pygame.image.fromstring(data, img.size, "RGBA").convert_alpha()
+                self.skin_thumbs[fname] = surf
+            except Exception:
+                pass
+        for fname in csball_skins:
+            path = os.path.join(self.csball_dir, fname)
             if not os.path.exists(path):
                 continue
             try:
@@ -168,8 +191,9 @@ class InventoryScreen(Screen):
         owned_balls = self.app.settings.get("inventory_balls", [])
         owned_baskets = self.app.settings.get("inventory_baskets", [])
         owned_bkballs = self.app.settings.get("inventory_bkballs", [])
+        owned_csballs = self.app.settings.get("inventory_csballs", [])
 
-        all_ball_skins = list(owned_balls) + list(owned_bkballs)
+        all_ball_skins = list(owned_balls) + list(owned_bkballs) + list(owned_csballs)
 
         render_text(surface, tr["skins_balls"] + ":", font_label, (0, 0, 0), 40, 110, 520)
 

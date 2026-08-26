@@ -91,6 +91,7 @@ class ClickerGame:
             "inv_balls": sorted(s.get("inventory_balls", [])),
             "inv_baskets": sorted(s.get("inventory_baskets", [])),
             "inv_bkballs": sorted(s.get("inventory_bkballs", [])),
+            "inv_csballs": sorted(s.get("inventory_csballs", [])),
         }
 
     def _compute_mac(self, save_data, context):

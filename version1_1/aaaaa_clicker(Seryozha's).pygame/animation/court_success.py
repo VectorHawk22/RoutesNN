@@ -8,10 +8,12 @@ class CourtSuccess(CourtBase):
         variant = random.randint(0, 3)
         self._variant = variant
 
-        self.state = "flying"
+        self.state = "jumping_up"
         self.ball_x = float(self._rest_x)
         self.ball_y = float(self._rest_y)
         self._frame_counter = 0
+        self._jump_t = 0
+        self._man_offset_y = 0.0
 
         self.target_x = float(self._rim_x)
         self.target_y = float(self._rim_y)
@@ -36,6 +38,29 @@ class CourtSuccess(CourtBase):
             return
         self._frame_counter = 0
 
+        if self.state == "jumping_up":
+            self._jump_t += 1
+            progress = self._jump_t / self._jump_duration
+            self._man_offset_y = self._jump_peak * (1.0 - (1.0 - progress) ** 2)
+            if self._jump_t >= self._jump_duration:
+                self._man_offset_y = float(self._jump_peak)
+                self.state = "flying"
+                self.ball_x = float(self._rest_x)
+                self.ball_y = float(self._rest_y)
+            return
+
+        if self.state == "flying":
+            self.flight_t += 1.0
+            if self.flight_t >= self.flight_T:
+                self.ball_x = self.target_x
+                self.ball_y = self.target_y
+                self.state = "falling"
+            else:
+                self.ball_x += self.flight_vx
+                self.ball_y += self.flight_vy
+                self.flight_vy += self.flight_g
+            return
+
         if self.state == "falling":
             if self.ball_y < self._ground_y:
                 speed = 4 if self._variant != 3 else 5
@@ -43,15 +68,15 @@ class CourtSuccess(CourtBase):
                 self.ball_y = min(self.ball_y + speed, float(self._ground_y))
                 self.ball_x += drift
             else:
-                self.state = "idle"
+                self.state = "jumping_down"
+                self._jump_t = 0
             return
 
-        self.flight_t += 1.0
-        if self.flight_t >= self.flight_T:
-            self.ball_x = self.target_x
-            self.ball_y = self.target_y
-            self.state = "falling"
-        else:
-            self.ball_x += self.flight_vx
-            self.ball_y += self.flight_vy
-            self.flight_vy += self.flight_g
+        if self.state == "jumping_down":
+            self._jump_t += 1
+            progress = self._jump_t / self._jump_duration
+            self._man_offset_y = self._jump_peak * (1.0 - progress)
+            if self._jump_t >= self._jump_duration:
+                self._man_offset_y = 0.0
+                self.state = "idle"
+            return

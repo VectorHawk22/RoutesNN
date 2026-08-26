@@ -25,26 +25,44 @@ BKBALL_VARIANTS = [
     {"file": "bkball6.png", "name": "BKBall 6", "price": 600},
 ]
 
+CSBALL_VARIANTS = [
+    {"file": "csball1.png", "name": "CS Ball 1", "price": 800},
+    {"file": "csball2.png", "name": "CS Ball 2", "price": 800},
+    {"file": "csball3.png", "name": "CS Ball 3", "price": 800},
+    {"file": "csball4.png", "name": "CS Ball 4", "price": 800},
+    {"file": "csball5.png", "name": "CS Ball 5", "price": 800},
+    {"file": "csball6.png", "name": "CS Ball 6", "price": 800},
+    {"file": "csball7.png", "name": "CS Ball 7", "price": 800},
+    {"file": "csball8.png", "name": "CS Ball 8", "price": 800},
+]
+
 
 class ShopScreen(Screen):
     def __init__(self, app):
         super().__init__(app)
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.animation_dir = os.path.join(self.base_dir, "animation")
+        self.csball_dir = os.path.join(self.animation_dir, "custom_balls")
         self.active_tab = "balls"
         self._thumb_refs = {}
         self._bkball_thumbs = {}
+        self._csball_thumbs = {}
         self.btn_upgrades = None
         self.btn_balls = None
         self.btn_baskets = None
         self.btn_black_edition = None
+        self.btn_custom_balls = None
         self.item_buy_rects = []
         self.black_selected_idx = 0
         self.black_swatch_rects = []
         self.black_buy_rect = None
+        self.cs_selected_idx = 0
+        self.cs_swatch_rects = []
+        self.cs_buy_rect = None
         try:
             self._load_thumbs()
             self._load_bkball_thumbs()
+            self._load_csball_thumbs()
         except Exception as e:
             print(f"Shop thumbs load error: {e}")
         self._build_tabs()
@@ -112,32 +130,80 @@ class ShopScreen(Screen):
             except Exception:
                 pass
 
+    def _load_csball_thumbs(self):
+        for variant in CSBALL_VARIANTS:
+            fname = variant["file"]
+            path = os.path.join(self.csball_dir, fname)
+            if not os.path.exists(path):
+                continue
+            try:
+                img = PILImage.open(path).convert("RGBA")
+                mask = img.getchannel("A").point(lambda a: 255 if a > 100 else 0)
+                bbox = mask.getbbox()
+                if bbox:
+                    img = img.crop(bbox)
+                w, h = img.size
+
+                box_s = 32
+                scale_s = min(box_s / float(w), box_s / float(h))
+                nw_s = max(1, int(w * scale_s))
+                nh_s = max(1, int(h * scale_s))
+                swatch_img = img.resize((nw_s, nh_s), PILImage.Resampling.LANCZOS)
+                swatch_surf = pygame.image.fromstring(
+                    swatch_img.tobytes(), swatch_img.size, "RGBA"
+                ).convert_alpha()
+
+                box_p = 80
+                scale_p = min(box_p / float(w), box_p / float(h))
+                nw_p = max(1, int(w * scale_p))
+                nh_p = max(1, int(h * scale_p))
+                preview_img = img.resize((nw_p, nh_p), PILImage.Resampling.LANCZOS)
+                preview_surf = pygame.image.fromstring(
+                    preview_img.tobytes(), preview_img.size, "RGBA"
+                ).convert_alpha()
+
+                self._csball_thumbs[fname] = {
+                    "swatch": swatch_surf,
+                    "preview": preview_surf,
+                }
+            except Exception:
+                pass
+
     def _build_tabs(self):
         tr = self.app.translations[self.app.current_lang]
+        tab_w = 95
         self.btn_upgrades = Button(
-            (40, 55, 120, 35), tr["shop_tab_upgrades"], font_size=12,
+            (40, 55, tab_w, 35), tr["shop_tab_upgrades"], font_size=11,
             bg_color=(200, 230, 255) if self.active_tab == "upgrades" else (220, 220, 220),
             callback=lambda: self._switch_tab("upgrades"))
         self.btn_balls = Button(
-            (167, 55, 120, 35), tr["shop_tab_balls"], font_size=12,
+            (140, 55, tab_w, 35), tr["shop_tab_balls"], font_size=11,
             bg_color=(200, 230, 255) if self.active_tab == "balls" else (220, 220, 220),
             callback=lambda: self._switch_tab("balls"))
         self.btn_baskets = Button(
-            (294, 55, 120, 35), tr["shop_tab_baskets"], font_size=12,
+            (240, 55, tab_w, 35), tr["shop_tab_baskets"], font_size=11,
             bg_color=(200, 230, 255) if self.active_tab == "baskets" else (220, 220, 220),
             callback=lambda: self._switch_tab("baskets"))
         is_be = self.active_tab == "black_edition"
         self.btn_black_edition = Button(
-            (421, 55, 124, 35), tr["shop_tab_black_edition"], font_size=10,
+            (340, 55, 100, 35), tr["shop_tab_black_edition"], font_size=10,
             bg_color=(60, 50, 30) if is_be else (40, 40, 40),
             text_color=(220, 180, 50) if is_be else (160, 140, 80),
             callback=lambda: self._switch_tab("black_edition"))
+        is_cs = self.active_tab == "custom_balls"
+        self.btn_custom_balls = Button(
+            (445, 55, 100, 35), tr["shop_tab_custom_balls"], font_size=10,
+            bg_color=(20, 50, 80) if is_cs else (15, 30, 50),
+            text_color=(100, 200, 255) if is_cs else (60, 130, 180),
+            callback=lambda: self._switch_tab("custom_balls"))
 
     def _switch_tab(self, name):
         self.active_tab = name
         self.item_buy_rects = []
         self.black_swatch_rects = []
         self.black_buy_rect = None
+        self.cs_swatch_rects = []
+        self.cs_buy_rect = None
         self._build_tabs()
 
     def handle_event(self, event):
@@ -145,6 +211,7 @@ class ShopScreen(Screen):
         self.btn_balls.handle_event(event)
         self.btn_baskets.handle_event(event)
         self.btn_black_edition.handle_event(event)
+        self.btn_custom_balls.handle_event(event)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.active_tab == "black_edition":
@@ -154,6 +221,13 @@ class ShopScreen(Screen):
                         return
                 if self.black_buy_rect and self.black_buy_rect.collidepoint(event.pos):
                     self._buy_bkball()
+            elif self.active_tab == "custom_balls":
+                for i, rect in enumerate(self.cs_swatch_rects):
+                    if rect.collidepoint(event.pos):
+                        self.cs_selected_idx = i
+                        return
+                if self.cs_buy_rect and self.cs_buy_rect.collidepoint(event.pos):
+                    self._buy_csball()
             else:
                 for rect, item, kind in self.item_buy_rects:
                     if rect.collidepoint(event.pos):
@@ -201,6 +275,28 @@ class ShopScreen(Screen):
 
         self.app.save_settings()
 
+    def _buy_csball(self):
+        tr = self.app.translations[self.app.current_lang]
+        variant = CSBALL_VARIANTS[self.cs_selected_idx]
+        inv = self.app.settings.get("inventory_csballs", [])
+
+        if variant["file"] in inv:
+            return
+
+        points = self.app.game.get_points()
+        if points < variant["price"]:
+            self.app.dialog.show_info(tr["btn_shop"], tr["shop_not_enough"])
+            return
+
+        self.app.game.points -= variant["price"]
+        self.app.game.save_game()
+
+        if variant["file"] not in inv:
+            inv.append(variant["file"])
+            self.app.settings["inventory_csballs"] = inv
+
+        self.app.save_settings()
+
     def update(self):
         pass
 
@@ -217,10 +313,13 @@ class ShopScreen(Screen):
         self.btn_balls.draw(surface)
         self.btn_baskets.draw(surface)
         self.btn_black_edition.draw(surface)
+        self.btn_custom_balls.draw(surface)
 
         self.item_buy_rects = []
         self.black_swatch_rects = []
         self.black_buy_rect = None
+        self.cs_swatch_rects = []
+        self.cs_buy_rect = None
 
         if self.active_tab == "upgrades":
             render_text(surface, tr["shop_coming_soon"], font_price, (140, 140, 140), 200, 200, 250)
@@ -232,6 +331,8 @@ class ShopScreen(Screen):
             self._draw_items(surface, BASKET_ITEMS, inv, "basket", font_name, font_price, font_small, tr)
         elif self.active_tab == "black_edition":
             self._draw_black_edition(surface, tr, font_name, font_price, font_small)
+        elif self.active_tab == "custom_balls":
+            self._draw_custom_balls(surface, tr, font_name, font_price, font_small)
 
     def _draw_items(self, surface, items, owned, kind, font_name, font_price, font_small, tr):
         y = 105
@@ -339,12 +440,6 @@ class ShopScreen(Screen):
 
             self.black_swatch_rects.append(swatch_rect)
 
-        preview_ball_thumb = self._thumb_refs.get(variant["file"])
-        if preview_ball_thumb:
-            big_x = 370
-            big_y = 190
-            surface.blit(preview_ball_thumb, (big_x, big_y))
-
         pygame.draw.line(surface, (80, 70, 35), (60, 350), (540, 350), 1)
 
         is_owned = variant["file"] in inv
@@ -365,3 +460,94 @@ class ShopScreen(Screen):
             surface.blit(buy_surf, (btn_rect.centerx - buy_surf.get_width() // 2,
                                     btn_rect.centery - buy_surf.get_height() // 2))
             self.black_buy_rect = btn_rect
+
+    def _draw_custom_balls(self, surface, tr, font_name, font_price, font_small):
+        inv = self.app.settings.get("inventory_csballs", [])
+
+        card_rect = pygame.Rect(40, 100, 520, 310)
+        pygame.draw.rect(surface, (12, 28, 48), card_rect, border_radius=10)
+        pygame.draw.rect(surface, (80, 170, 230), card_rect, 2, border_radius=10)
+
+        title_font = get_font(18, bold=True)
+        render_text(surface, "CUSTOM BALLS", title_font, (100, 200, 255), 40, 108, 520)
+        render_text(surface, tr["custom_balls_subtitle"], font_small, (60, 130, 180), 40, 132, 520)
+
+        pygame.draw.line(surface, (30, 80, 120), (60, 152), (540, 152), 1)
+
+        variant = CSBALL_VARIANTS[self.cs_selected_idx]
+        thumbs = self._csball_thumbs.get(variant["file"])
+
+        preview_bg = pygame.Rect(65, 168, 100, 100)
+        pygame.draw.rect(surface, (18, 38, 58), preview_bg, border_radius=8)
+        pygame.draw.rect(surface, (40, 100, 150), preview_bg, 1, border_radius=8)
+
+        if thumbs and "preview" in thumbs:
+            preview = thumbs["preview"]
+            px = preview_bg.centerx - preview.get_width() // 2
+            py = preview_bg.centery - preview.get_height() // 2
+            surface.blit(preview, (px, py))
+
+        render_text(surface, variant["name"], font_name, (80, 170, 220), 65, 275, 100)
+
+        render_text(surface, tr["custom_balls_select"], font_small, (60, 130, 180), 200, 162, 200)
+
+        swatch_size = 38
+        swatch_gap = 8
+        grid_x = 200
+        grid_y = 185
+
+        for i, v in enumerate(CSBALL_VARIANTS):
+            col = i % 4
+            row = i // 4
+            sx = grid_x + col * (swatch_size + swatch_gap)
+            sy = grid_y + row * (swatch_size + swatch_gap)
+            swatch_rect = pygame.Rect(sx, sy, swatch_size, swatch_size)
+
+            is_selected = (i == self.cs_selected_idx)
+            is_owned = v["file"] in inv
+
+            if is_selected:
+                bg = (20, 50, 80)
+                border = (100, 200, 255)
+                bw = 2
+            elif is_owned:
+                bg = (15, 45, 30)
+                border = (60, 160, 100)
+                bw = 1
+            else:
+                bg = (18, 38, 58)
+                border = (40, 80, 110)
+                bw = 1
+
+            pygame.draw.rect(surface, bg, swatch_rect, border_radius=5)
+            pygame.draw.rect(surface, border, swatch_rect, bw, border_radius=5)
+
+            vthumbs = self._csball_thumbs.get(v["file"])
+            if vthumbs and "swatch" in vthumbs:
+                st = vthumbs["swatch"]
+                stx = swatch_rect.centerx - st.get_width() // 2
+                sty = swatch_rect.centery - st.get_height() // 2
+                surface.blit(st, (stx, sty))
+
+            self.cs_swatch_rects.append(swatch_rect)
+
+        pygame.draw.line(surface, (30, 80, 120), (60, 350), (540, 350), 1)
+
+        is_owned = variant["file"] in inv
+        if is_owned:
+            render_text(surface, tr["shop_owned"], font_name, (80, 200, 130), 60, 360, 200)
+        else:
+            price_text = tr["shop_price"].format(variant["price"])
+            render_text(surface, price_text, font_price, (100, 200, 255), 60, 365, 200)
+
+            btn_rect = pygame.Rect(400, 355, 130, 38)
+            mouse_over = btn_rect.collidepoint(pygame.mouse.get_pos())
+            color = (120, 210, 255) if mouse_over else (80, 170, 230)
+            pygame.draw.rect(surface, color, btn_rect, border_radius=6)
+            pygame.draw.rect(surface, (40, 100, 150), btn_rect, 1, border_radius=6)
+            buy_txt = strip_emoji(tr["shop_buy"])
+            buy_font = get_font(14, bold=True)
+            buy_surf = buy_font.render(buy_txt, True, (10, 25, 45))
+            surface.blit(buy_surf, (btn_rect.centerx - buy_surf.get_width() // 2,
+                                    btn_rect.centery - buy_surf.get_height() // 2))
+            self.cs_buy_rect = btn_rect

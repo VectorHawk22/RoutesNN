@@ -11,12 +11,18 @@ class CourtBase:
         self.basket_file = basket_file
 
         self._pil_man = None
+        self._pil_man_jump = None
+        self._pil_man_ball = None
         self._pil_basket = None
         self._pil_ball = None
 
         self.img_man = None
+        self.img_man_jump = None
+        self.img_man_ball = None
         self.img_basket = None
         self.img_ball = None
+
+        self._use_idle_ball_man = False
 
         self.man_w = 0
         self.man_h = 0
@@ -53,10 +59,18 @@ class CourtBase:
         self._frame_counter = 0
         self._tick_interval = 3
 
+        self._man_offset_y = 0.0
+        self._jump_phase = None
+        self._jump_t = 0
+        self._jump_duration = 8
+        self._jump_peak = -22
+
         self.load_images()
 
     def load_images(self):
         self._pil_man = load_pil_cropped("man.png", self.base_dir)
+        self._pil_man_jump = load_pil_cropped("man+jump.png", self.base_dir)
+        self._pil_man_ball = load_pil_cropped("man+ball.png", self.base_dir)
         self._pil_basket = load_pil_cropped(self.basket_file, self.base_dir)
         self._pil_ball = load_pil_cropped(self.ball_file, self.base_dir)
 
@@ -68,9 +82,12 @@ class CourtBase:
         self._prepared_size = None
         self.load_images()
 
+    def set_idle_ball_man(self, enabled):
+        self._use_idle_ball_man = enabled
+
     def prepare(self, court_w, court_h):
         key = (court_w, court_h)
-        if self._prepared_size == key and self.img_man and self.img_basket and self.img_ball:
+        if self._prepared_size == key and self.img_man and self.img_man_jump and self.img_man_ball and self.img_basket and self.img_ball:
             return
 
         self._court_w = court_w
@@ -88,6 +105,18 @@ class CourtBase:
             nh = max(1, man_target_h)
             self.img_man = pil_to_pygame(self._pil_man.resize((nw, nh)))
             self.man_w, self.man_h = nw, nh
+
+        if self._pil_man_jump:
+            w, h = self._pil_man_jump.size
+            nw = max(1, int(w * man_target_h / h))
+            nh = max(1, man_target_h)
+            self.img_man_jump = pil_to_pygame(self._pil_man_jump.resize((nw, nh)))
+
+        if self._pil_man_ball:
+            w, h = self._pil_man_ball.size
+            nw = max(1, int(w * man_target_h / h))
+            nh = max(1, man_target_h)
+            self.img_man_ball = pil_to_pygame(self._pil_man_ball.resize((nw, nh)))
 
         if self._pil_basket:
             w, h = self._pil_basket.size
@@ -129,27 +158,36 @@ class CourtBase:
             surface.blit(self.img_basket,
                          (cx + self._basket_left_x, cy + sky_h - self.basket_h))
 
-        if self.img_man:
-            surface.blit(self.img_man,
-                         (cx + self._man_x, cy + sky_h - self.man_h))
+        man_base_y = cy + sky_h - self.man_h
+        man_draw_y = man_base_y + int(self._man_offset_y)
+
+        if self.state in ("jumping_up", "jumping_down") and self.img_man_jump:
+            surface.blit(self.img_man_jump, (cx + self._man_x, man_draw_y))
+        elif self._use_idle_ball_man and self.img_man_ball and self.state == "idle":
+            surface.blit(self.img_man_ball, (cx + self._man_x, man_draw_y))
+        elif self.img_man:
+            surface.blit(self.img_man, (cx + self._man_x, man_draw_y))
 
         if self.state == "idle":
             self.ball_x = float(self._rest_x)
             self.ball_y = float(self._rest_y)
 
-        if self.img_ball:
-            bw = self.img_ball.get_width()
-            bh = self.img_ball.get_height()
-            surface.blit(self.img_ball,
-                         (cx + int(self.ball_x) - bw // 2,
-                          cy + int(self.ball_y) - bh // 2))
+        if not (self._use_idle_ball_man and self.state == "idle"):
+            if self.img_ball:
+                bw = self.img_ball.get_width()
+                bh = self.img_ball.get_height()
+                surface.blit(self.img_ball,
+                             (cx + int(self.ball_x) - bw // 2,
+                              cy + int(self.ball_y) - bh // 2))
 
     def start_animation(self, court_w, court_h):
         self.prepare(court_w, court_h)
-        self.state = "flying"
+        self.state = "jumping_up"
         self.ball_x = float(self._rest_x)
         self.ball_y = float(self._rest_y)
         self._frame_counter = 0
+        self._jump_t = 0
+        self._man_offset_y = 0.0
         self.target_x = float(self._rim_x)
         self.target_y = float(self._rim_y)
         self._plan_flight(self.target_x, self.target_y)
@@ -157,6 +195,8 @@ class CourtBase:
     def stop(self):
         self.state = "idle"
         self._frame_counter = 0
+        self._jump_t = 0
+        self._man_offset_y = 0.0
 
     def _plan_flight(self, ex, ey):
         sx, sy = self.ball_x, self.ball_y
@@ -195,21 +235,44 @@ class CourtBase:
             return
         self._frame_counter = 0
 
-        self.flight_t += 1.0
-        if self.flight_t >= self.flight_T:
-            self.ball_x = self.target_x
-            self.ball_y = self.target_y
-            self.state = "idle"
-        else:
-            self.ball_x += self.flight_vx
-            self.ball_y += self.flight_vy
-            self.flight_vy += self.flight_g
+        if self.state == "jumping_up":
+            self._jump_t += 1
+            progress = self._jump_t / self._jump_duration
+            self._man_offset_y = self._jump_peak * (1.0 - (1.0 - progress) ** 2)
+            if self._jump_t >= self._jump_duration:
+                self._man_offset_y = float(self._jump_peak)
+                self.state = "flying"
+                self.ball_x = float(self._rest_x)
+                self.ball_y = float(self._rest_y)
+            return
 
-            if (self.flight_vx > 0 and
-                self.ball_x + self.ball_r >= self._backboard_x):
-                self.ball_x = float(self._backboard_x - self.ball_r)
-                self.flight_vx = -abs(self.flight_vx) * 0.6
-                self.flight_vy *= 0.8
+        if self.state == "flying":
+            self.flight_t += 1.0
+            if self.flight_t >= self.flight_T:
+                self.ball_x = self.target_x
+                self.ball_y = self.target_y
+                self.state = "jumping_down"
+                self._jump_t = 0
+            else:
+                self.ball_x += self.flight_vx
+                self.ball_y += self.flight_vy
+                self.flight_vy += self.flight_g
+
+                if (self.flight_vx > 0 and
+                    self.ball_x + self.ball_r >= self._backboard_x):
+                    self.ball_x = float(self._backboard_x - self.ball_r)
+                    self.flight_vx = -abs(self.flight_vx) * 0.6
+                    self.flight_vy *= 0.8
+            return
+
+        if self.state == "jumping_down":
+            self._jump_t += 1
+            progress = self._jump_t / self._jump_duration
+            self._man_offset_y = self._jump_peak * (1.0 - progress)
+            if self._jump_t >= self._jump_duration:
+                self._man_offset_y = 0.0
+                self.state = "idle"
+            return
 
     @property
     def is_animating(self):

@@ -102,6 +102,8 @@ class App:
                 self.screens["inventory"] = InventoryScreen(self)
             elif name == "shop":
                 self.screens["shop"] = ShopScreen(self)
+        if name == "game" and "game" in self.screens and self.screens["game"]:
+            self.screens["game"]._reset_idle_timer()
         self.current_screen = name
 
     def set_language(self, lang):
@@ -145,7 +147,7 @@ class App:
             "sound": True, "language": "Русский",
             "skin_ball": "ball1.png", "skin_basket": "basket.png",
             "inventory_balls": ["ball1.png"], "inventory_baskets": ["basket.png"],
-            "inventory_bkballs": []
+            "inventory_bkballs": [], "inventory_csballs": []
         }
         if not os.path.exists(settings_file):
             try:
