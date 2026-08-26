@@ -35,6 +35,7 @@ class CourtBase:
         self._ground_y = 0
         self._rest_x = 0
         self._rest_y = 0
+        self._backboard_x = 0
 
         self.state = "idle"
         self.ball_x = 0.0
@@ -110,6 +111,7 @@ class CourtBase:
         self._rim_x = self._basket_left_x + int(self.basket_w * cal["cx"])
         self._rim_y = (sky_h - self.basket_h) + int(self.basket_h * cal["cy"])
         self._ground_y = sky_h - self.ball_r
+        self._backboard_x = self._basket_left_x + self.basket_w - 5
 
         self._rest_x = self._man_x + int(self.man_w * 0.8)
         self._rest_y = sky_h - int(self.man_h * 0.65)
@@ -202,6 +204,12 @@ class CourtBase:
             self.ball_x += self.flight_vx
             self.ball_y += self.flight_vy
             self.flight_vy += self.flight_g
+
+            if (self.flight_vx > 0 and
+                self.ball_x + self.ball_r >= self._backboard_x):
+                self.ball_x = float(self._backboard_x - self.ball_r)
+                self.flight_vx = -abs(self.flight_vx) * 0.6
+                self.flight_vy *= 0.8
 
     @property
     def is_animating(self):

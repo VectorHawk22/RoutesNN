@@ -1,7 +1,7 @@
 {
     "sound": true,
     "language": "Русский",
-    "skin_ball": "ball4.png",
+    "skin_ball": "bkball6.png",
     "skin_basket": "basket2.png",
     "inventory_balls": [
         "ball1.png",
@@ -15,6 +15,13 @@
         "basket3.png",
         "basket2.png"
     ],
-    "inventory_bkballs": [],
-    "_v": "dccaf878ba9ab01cd21ebbeb44b778abee582a95dae5e2b477d3d7f0787840a4"
+    "inventory_bkballs": [
+        "bkball1.png",
+        "bkball2.png",
+        "bkball3.png",
+        "bkball6.png",
+        "bkball5.png",
+        "bkball4.png"
+    ],
+    "_v": "5156c4839c1f7f870b13ee5602366b55ddf38f9c515bf57f2011abd07e70e987"
 }

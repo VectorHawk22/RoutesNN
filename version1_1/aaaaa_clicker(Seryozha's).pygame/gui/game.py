@@ -31,6 +31,13 @@ class GameScreen(Screen):
         self._build_nav()
         self._update_button_text()
 
+        self._float_text = ""
+        self._float_y = 0.0
+        self._float_color = (0, 0, 0)
+        self._float_timer = 0
+        self._flash_timer = 0
+        self._flash_color = (0, 0, 0)
+
     def _build_nav(self):
         tr = self.app.translations[self.app.current_lang]
         self.nav_buttons = [
@@ -101,6 +108,21 @@ class GameScreen(Screen):
         self.game_state = "idle"
         self._update_button_text()
 
+        if success:
+            self._float_text = "+1"
+            self._float_color = (0, 200, 0)
+            self._float_y = 150.0
+            self._float_timer = 40
+            self._flash_timer = 12
+            self._flash_color = (0, 200, 0)
+        else:
+            self._float_text = "MISS"
+            self._float_color = (220, 50, 50)
+            self._float_y = 150.0
+            self._float_timer = 40
+            self._flash_timer = 12
+            self._flash_color = (220, 50, 50)
+
     def update(self):
         if self.game_state == "challenging":
             self.challenge_timer -= 1
@@ -109,6 +131,12 @@ class GameScreen(Screen):
 
         self.court_success.update()
         self.court_fail.update()
+
+        if self._float_timer > 0:
+            self._float_timer -= 1
+            self._float_y -= 1.2
+        if self._flash_timer > 0:
+            self._flash_timer -= 1
 
     def handle_event(self, event):
         self.btn_click.handle_event(event)
@@ -124,6 +152,20 @@ class GameScreen(Screen):
             self.court_fail.draw(surface, COURT_X, COURT_Y, COURT_W, COURT_H)
         else:
             self.court_success.draw(surface, COURT_X, COURT_Y, COURT_W, COURT_H)
+
+        if self._flash_timer > 0:
+            alpha = min(255, self._flash_timer * 14)
+            overlay = pygame.Surface((COURT_W, COURT_H), pygame.SRCALPHA)
+            overlay.fill((*self._flash_color, alpha))
+            surface.blit(overlay, (COURT_X, COURT_Y))
+
+        if self._float_timer > 0:
+            alpha = min(255, self._float_timer * 7)
+            fnt = get_font(24, bold=True)
+            txt_surf = fnt.render(self._float_text, True, self._float_color)
+            txt_surf.set_alpha(alpha)
+            tx = COURT_X + COURT_W // 2 - txt_surf.get_width() // 2
+            surface.blit(txt_surf, (tx, int(self._float_y)))
 
         if self.result_type == "hit":
             render_text(surface, tr["hit"], font_result, (0, 150, 0), 30, 285, 400)
