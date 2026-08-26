@@ -144,7 +144,8 @@ class App:
         defaults = {
             "sound": True, "language": "Русский",
             "skin_ball": "ball1.png", "skin_basket": "basket.png",
-            "inventory_balls": ["ball1.png"], "inventory_baskets": ["basket.png"]
+            "inventory_balls": ["ball1.png"], "inventory_baskets": ["basket.png"],
+            "inventory_bkballs": []
         }
         if not os.path.exists(settings_file):
             try:

@@ -44,9 +44,11 @@ class InventoryScreen(Screen):
                     print(f"Potion image load error ({fname}): {e}")
 
     def _load_skin_thumbnails(self):
-        ball_skins = ["ball1.png", "ball2.png", "ball3.png", "ball4.png"]
+        ball_skins = ["ball1.png", "ball2.png", "ball3.png", "ball4.png", "ball5.png"]
         basket_skins = ["basket.png", "basket2.png", "basket3.png", "basket4.png"]
-        for fname in ball_skins + basket_skins:
+        bkball_skins = ["bkball1.png", "bkball2.png", "bkball3.png",
+                        "bkball4.png", "bkball5.png", "bkball6.png"]
+        for fname in ball_skins + basket_skins + bkball_skins:
             path = os.path.join(self.animation_dir, fname)
             if not os.path.exists(path):
                 continue
@@ -165,11 +167,25 @@ class InventoryScreen(Screen):
 
         owned_balls = self.app.settings.get("inventory_balls", [])
         owned_baskets = self.app.settings.get("inventory_baskets", [])
+        owned_bkballs = self.app.settings.get("inventory_bkballs", [])
+
+        all_ball_skins = list(owned_balls) + list(owned_bkballs)
 
         render_text(surface, tr["skins_balls"] + ":", font_label, (0, 0, 0), 40, 110, 520)
+
+        cell_w = 90
+        cell_h = 100
+        gap = 6
+        cols = 5
         x_start = 40
-        for i, fname in enumerate(owned_balls):
-            rect = pygame.Rect(x_start + i * 110, 140, 100, 110)
+        y_start = 135
+
+        for i, fname in enumerate(all_ball_skins):
+            col = i % cols
+            row = i // cols
+            x = x_start + col * (cell_w + gap)
+            y = y_start + row * (cell_h + gap)
+            rect = pygame.Rect(x, y, cell_w, cell_h)
             is_sel = (fname == current_ball)
             border_color = (0, 120, 215) if is_sel else (180, 180, 180)
             bg_color = (220, 240, 255) if is_sel else (240, 240, 240)
@@ -179,7 +195,7 @@ class InventoryScreen(Screen):
             thumb = self.skin_thumbs.get(fname)
             if thumb:
                 tx = rect.centerx - thumb.get_width() // 2
-                ty = rect.y + 10
+                ty = rect.y + 8
                 surface.blit(thumb, (tx, ty))
 
             name_label = fname.replace(".png", "")
@@ -187,9 +203,12 @@ class InventoryScreen(Screen):
                         rect.centerx - 15, rect.bottom - 18)
             self.skin_rects[("ball", fname)] = rect
 
-        render_text(surface, tr["skins_baskets"] + ":", font_label, (0, 0, 0), 40, 265, 520)
+        baskets_y = y_start + ((len(all_ball_skins) + cols - 1) // cols) * (cell_h + gap) + 15
+        render_text(surface, tr["skins_baskets"] + ":", font_label, (0, 0, 0), 40, baskets_y, 520)
+        bx_start = 40
+        by_start = baskets_y + 25
         for i, fname in enumerate(owned_baskets):
-            rect = pygame.Rect(x_start + i * 110, 295, 100, 110)
+            rect = pygame.Rect(bx_start + i * 110, by_start, 100, 100)
             is_sel = (fname == current_basket)
             border_color = (0, 120, 215) if is_sel else (180, 180, 180)
             bg_color = (220, 240, 255) if is_sel else (240, 240, 240)
@@ -199,7 +218,7 @@ class InventoryScreen(Screen):
             thumb = self.skin_thumbs.get(fname)
             if thumb:
                 tx = rect.centerx - thumb.get_width() // 2
-                ty = rect.y + 10
+                ty = rect.y + 8
                 surface.blit(thumb, (tx, ty))
 
             name_label = fname.replace(".png", "")
