@@ -3,6 +3,10 @@ import pygame
 from PIL import Image as PILImage
 from gui import Screen, Button, get_font, render_text, strip_emoji
 
+# Content view for the skins tab must not reach the Back button (which starts
+# at screen y=440). Stop before it so scrolled cells never draw over it.
+_SKIN_VIEW_BOTTOM = 437
+
 
 class InventoryScreen(Screen):
     def __init__(self, app):
@@ -139,8 +143,7 @@ class InventoryScreen(Screen):
         return baskets_y + 25 + (100 if nbasket else 0) + 8
 
     def _skins_max_scroll(self, surface=None):
-        view_bottom = (surface.get_height() if surface else 480) - 10
-        return max(0, self._skins_content_bottom() - view_bottom)
+        return max(0, self._skins_content_bottom() - _SKIN_VIEW_BOTTOM)
 
     def handle_event(self, event):
         self.btn_tab_potions.handle_event(event)
@@ -254,10 +257,11 @@ class InventoryScreen(Screen):
         x_start = 40
         y_start = 135
 
-        view_bottom = surface.get_height() - 10
+        view_bottom = _SKIN_VIEW_BOTTOM
 
         old_clip = surface.get_clip()
-        surface.set_clip(pygame.Rect(0, 105, surface.get_width(), view_bottom - 105))
+        surface.set_clip(pygame.Rect(0, 105, surface.get_width(),
+                                     _SKIN_VIEW_BOTTOM - 105))
 
         render_text(surface, tr["skins_balls"] + ":", font_label, (0, 0, 0), 40, 110 - scroll, 520)
 

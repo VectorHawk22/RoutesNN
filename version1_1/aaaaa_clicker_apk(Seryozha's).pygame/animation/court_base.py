@@ -74,6 +74,7 @@ class CourtBase:
 
         self._man_descending = False
         self._man_descend_t = 0
+        self._man_descent_tick = 0
 
         self.load_images()
 

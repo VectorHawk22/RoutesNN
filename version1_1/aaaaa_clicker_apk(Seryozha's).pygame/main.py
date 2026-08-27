@@ -150,12 +150,13 @@ class App:
                                     self.back_btn_rect.centery - txt_surf.get_height() // 2))
 
     def _draw_glitch_label(self):
+        if self.current_screen != "game":
+            return
         font = get_font(10)
         txt = font.render("GlitchHunters", True, (0, 0, 200))
         self.screen.blit(txt, (10, HEIGHT - 25))
 
     def on_closing(self):
-        self.game.save_game()
         self.save_settings()
         self.running = False
         pygame.quit()
@@ -188,6 +189,13 @@ class App:
         try:
             with open(settings_file, "w", encoding="utf-8") as f:
                 json.dump(self.settings, f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+        # Anti-cheat: the MAC (_v) binds points to settings context (language,
+        # skins, inventories). Recompute it after ANY settings change so a later
+        # load never mistakes a legitimate change for tampering.
+        try:
+            self.game.save_game()
         except Exception:
             pass
 
