@@ -1,56 +1,43 @@
 [app]
-# ===== Общие настройки пакета =====
+
+# ===== Пакет =====
 title = Basketball Click
-
-# Имя пакета (без апострофов и спецсимволов!)
 package.name = basketballclick
-
-# Домен-производитель (формат обратного домена, строчными буквами)
 package.domain = org.seryozha
-
-# Версия и код версии
 version = 1.0
 android.version_code = 1
 
-# Минимальная версия Android и таргет
-android.min_sdk_version = 21
-android.target_sdk_version = 33
-
-# Записи REPL/service не нужны, безусловно отключаем
-android.allow_backup = True
-android.orientation = landscape
-android.fullscreen = 1
-
 # ===== Источники =====
+# Папка, в которой лежит игра (buildozer запускается из неё)
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,json,txt
 source.exclude_exts = pyc,pyo,md
-source.exclude_dirs = tests,bin,.buildozer,build,dist
 
-# Запрещаем копировать сам spec и папку логики сборки
-source.exclude_patterns = buildozer.spec,*.md
+# ===== Ориентация и полноэкранный режим =====
+android.orientation = landscape
+android.fullscreen = 1
 
-# ===== Точка входа =====
-p4a.bootstrap = sdl2
-p4a.entry_point = main.py
+# ===== Версии Android =====
+android.min_sdk_version = 21
+android.target_sdk_version = 33
 
-# ===== Зависимости =====
-# pygame тянет SDL2; pillow нужен для работы с картинками (обрезка/поворот)
-requirements = python3,pygame,pyjnius,pillow
-
-# Запрещаем символические ссылки внутри APK (мешают некоторым устройствам)
-android.private_storage = True
-
-# Окно: скейлим сгенерированную картинку 600x490 на весь экран
-android.wakelock = True
-
-# Учётная пара и подпись (сгенерируйте свои ключи для Google Play)
-android.accept_sdk_license = True
+# ===== Архитектуры =====
+# arm64-v8a - большинство современных телефонов
 android.archs = arm64-v8a, armeabi-v7a
 
-# Иконка и пресплэш (замените на свои файлы)
-# android.icon.filename = %(source.dir)s/icon.png
-# android.presplash.filename = %(source.dir)s/presplash.png
+# ===== Зависимости =====
+# pygame - движок; pillow - работа с картинками (обрезка/поворот)
+requirements = python3,pygame,pillow
+
+# ===== Bootstrap (движок окна на Android) =====
+# pygame 2 работает через SDL2
+p4a.bootstrap = sdl2
+
+# ===== Прочее =====
+android.wakelock = True
+android.accept_sdk_license = True
+# Цвет пресплэша пока не используем иконки по умолчанию
+android.presplash_color = #FFFFFF
 
 [buildozer]
 log_level = 2

@@ -26,6 +26,15 @@ class InventoryScreen(Screen):
         self.skin_rects = {}
         self._potion_timer = 0
 
+        self.skin_scroll = 0
+        self._scroll_dragging = False
+        self._scroll_drag_offset = 0
+        self._scrollbar_thumb = None
+        self._scroll_view_top = 0
+        self._scroll_view_bottom = 0
+        self._scroll_track_h = 0
+        self._scroll_track_rect = None
+
         self._build_tabs()
 
     def _load_potion_images(self):
@@ -109,6 +118,8 @@ class InventoryScreen(Screen):
 
     def _switch_tab(self, name):
         self.active_tab = name
+        if name != "skins":
+            self.skin_scroll = 0
         self._build_tabs()
 
     def _use_potion(self):
@@ -117,14 +128,33 @@ class InventoryScreen(Screen):
             self._potion_timer = 180
             self.btn_use_potion.set_text(tr["use"])
 
+    def _skins_content_bottom(self):
+        nball = (len(self.app.settings.get("inventory_balls", [])) +
+                 len(self.app.settings.get("inventory_bkballs", [])) +
+                 len(self.app.settings.get("inventory_csballs", [])))
+        nbasket = len(self.app.settings.get("inventory_baskets", []))
+        rows = (nball + 4) // 5 if nball else 0
+        grid_h = rows * (100 + 6)
+        baskets_y = 135 + grid_h + 15
+        return baskets_y + 25 + (100 if nbasket else 0) + 8
+
+    def _skins_max_scroll(self, surface=None):
+        view_bottom = (surface.get_height() if surface else 480) - 10
+        return max(0, self._skins_content_bottom() - view_bottom)
+
     def handle_event(self, event):
         self.btn_tab_potions.handle_event(event)
         self.btn_tab_skins.handle_event(event)
 
+        max_scroll = self._skins_max_scroll()
+
         if self.active_tab == "potions":
             self.btn_use_potion.handle_event(event)
         elif self.active_tab == "skins":
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == pygame.MOUSEWHEEL:
+                self.skin_scroll -= event.y * 40
+                self.skin_scroll = max(0, min(max_scroll, self.skin_scroll))
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for (kind, fname), rect in self.skin_rects.items():
                     if rect.collidepoint(event.pos):
                         key = "skin_ball" if kind == "ball" else "skin_basket"
@@ -132,6 +162,24 @@ class InventoryScreen(Screen):
                         self.app.save_settings()
                         self.app.apply_skins()
                         break
+                else:
+                    if self._scrollbar_thumb and self._scrollbar_thumb.collidepoint(event.pos):
+                        self._scroll_dragging = True
+                        self._scroll_drag_offset = event.pos[1] - self._scrollbar_thumb.y
+                        self.skin_scroll = max(0, min(max_scroll, self.skin_scroll))
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 4:
+                self.skin_scroll = max(0, self.skin_scroll - 40)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 5:
+                self.skin_scroll = min(max_scroll, self.skin_scroll + 40)
+            elif event.type == pygame.MOUSEMOTION and self._scroll_dragging:
+                view_top = self._scroll_view_top
+                view_bottom = self._scroll_view_bottom
+                view_h = max(1, view_bottom - view_top)
+                if self._scroll_track_h and view_h > 0:
+                    frac = (event.pos[1] - self._scroll_drag_offset - view_top) / self._scroll_track_h
+                    self.skin_scroll = max(0, min(max_scroll, frac * max_scroll))
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self._scroll_dragging = False
 
     def update(self):
         if self._potion_timer > 0:
@@ -195,7 +243,9 @@ class InventoryScreen(Screen):
 
         all_ball_skins = list(owned_balls) + list(owned_bkballs) + list(owned_csballs)
 
-        render_text(surface, tr["skins_balls"] + ":", font_label, (0, 0, 0), 40, 110, 520)
+        max_scroll = self._skins_max_scroll(surface)
+        self.skin_scroll = max(0, min(max_scroll, self.skin_scroll))
+        scroll = self.skin_scroll
 
         cell_w = 90
         cell_h = 100
@@ -204,11 +254,18 @@ class InventoryScreen(Screen):
         x_start = 40
         y_start = 135
 
+        view_bottom = surface.get_height() - 10
+
+        old_clip = surface.get_clip()
+        surface.set_clip(pygame.Rect(0, 105, surface.get_width(), view_bottom - 105))
+
+        render_text(surface, tr["skins_balls"] + ":", font_label, (0, 0, 0), 40, 110 - scroll, 520)
+
         for i, fname in enumerate(all_ball_skins):
             col = i % cols
             row = i // cols
             x = x_start + col * (cell_w + gap)
-            y = y_start + row * (cell_h + gap)
+            y = y_start + row * (cell_h + gap) - scroll
             rect = pygame.Rect(x, y, cell_w, cell_h)
             is_sel = (fname == current_ball)
             border_color = (0, 120, 215) if is_sel else (180, 180, 180)
@@ -227,7 +284,7 @@ class InventoryScreen(Screen):
                         rect.centerx - 15, rect.bottom - 18)
             self.skin_rects[("ball", fname)] = rect
 
-        baskets_y = y_start + ((len(all_ball_skins) + cols - 1) // cols) * (cell_h + gap) + 15
+        baskets_y = y_start + ((len(all_ball_skins) + cols - 1) // cols) * (cell_h + gap) + 15 - scroll
         render_text(surface, tr["skins_baskets"] + ":", font_label, (0, 0, 0), 40, baskets_y, 520)
         bx_start = 40
         by_start = baskets_y + 25
@@ -249,3 +306,29 @@ class InventoryScreen(Screen):
             render_text(surface, name_label, font_small, (80, 80, 80),
                         rect.centerx - 15, rect.bottom - 18)
             self.skin_rects[("basket", fname)] = rect
+
+        surface.set_clip(old_clip)
+
+        self._draw_scrollbar(surface, y_start, view_bottom, max_scroll)
+
+    def _draw_scrollbar(self, surface, view_top, view_bottom, max_scroll):
+        self._scroll_view_top = view_top
+        self._scroll_view_bottom = view_bottom
+        track_h = max(1, view_bottom - view_top)
+        self._scroll_track_h = track_h
+
+        if max_scroll <= 0:
+            self._scrollbar_thumb = None
+            return
+
+        x = surface.get_width() - 14
+        track = pygame.Rect(x, view_top, 8, track_h)
+        self._scroll_track_rect = track
+        pygame.draw.rect(surface, (205, 205, 205), track, border_radius=4)
+
+        frac = self.skin_scroll / max_scroll
+        thumb_h = max(24, int(track_h * (track_h / (max_scroll + track_h))))
+        thumb_y = view_top + int(frac * (track_h - thumb_h))
+        thumb = pygame.Rect(x, thumb_y, 8, thumb_h)
+        pygame.draw.rect(surface, (120, 120, 120), thumb, border_radius=4)
+        self._scrollbar_thumb = thumb

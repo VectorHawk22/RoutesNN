@@ -4,6 +4,9 @@ from PIL import Image as PILImage
 from gui import Screen, Button, get_font, strip_emoji, render_text
 
 
+SET_PRICE = 1500
+
+
 BALL_ITEMS = [
     {"file": "ball2.png", "name": "Ball 2", "price": 500},
     {"file": "ball3.png", "name": "Ball 3", "price": 500},
@@ -220,14 +223,14 @@ class ShopScreen(Screen):
                         self.black_selected_idx = i
                         return
                 if self.black_buy_rect and self.black_buy_rect.collidepoint(event.pos):
-                    self._buy_bkball()
+                    self._buy_bkball_set()
             elif self.active_tab == "custom_balls":
                 for i, rect in enumerate(self.cs_swatch_rects):
                     if rect.collidepoint(event.pos):
                         self.cs_selected_idx = i
                         return
                 if self.cs_buy_rect and self.cs_buy_rect.collidepoint(event.pos):
-                    self._buy_csball()
+                    self._buy_csball_set()
             else:
                 for rect, item, kind in self.item_buy_rects:
                     if rect.collidepoint(event.pos):
@@ -253,47 +256,47 @@ class ShopScreen(Screen):
         self.app.save_settings()
         self._build_tabs()
 
-    def _buy_bkball(self):
+    def _buy_bkball_set(self):
         tr = self.app.translations[self.app.current_lang]
-        variant = BKBALL_VARIANTS[self.black_selected_idx]
         inv = self.app.settings.get("inventory_bkballs", [])
 
-        if variant["file"] in inv:
+        if all(v["file"] in inv for v in BKBALL_VARIANTS):
             return
 
         points = self.app.game.get_points()
-        if points < variant["price"]:
+        if points < SET_PRICE:
             self.app.dialog.show_info(tr["btn_shop"], tr["shop_not_enough"])
             return
 
-        self.app.game.points -= variant["price"]
+        self.app.game.points -= SET_PRICE
         self.app.game.save_game()
 
-        if variant["file"] not in inv:
-            inv.append(variant["file"])
-            self.app.settings["inventory_bkballs"] = inv
+        for v in BKBALL_VARIANTS:
+            if v["file"] not in inv:
+                inv.append(v["file"])
+        self.app.settings["inventory_bkballs"] = inv
 
         self.app.save_settings()
 
-    def _buy_csball(self):
+    def _buy_csball_set(self):
         tr = self.app.translations[self.app.current_lang]
-        variant = CSBALL_VARIANTS[self.cs_selected_idx]
         inv = self.app.settings.get("inventory_csballs", [])
 
-        if variant["file"] in inv:
+        if all(v["file"] in inv for v in CSBALL_VARIANTS):
             return
 
         points = self.app.game.get_points()
-        if points < variant["price"]:
+        if points < SET_PRICE:
             self.app.dialog.show_info(tr["btn_shop"], tr["shop_not_enough"])
             return
 
-        self.app.game.points -= variant["price"]
+        self.app.game.points -= SET_PRICE
         self.app.game.save_game()
 
-        if variant["file"] not in inv:
-            inv.append(variant["file"])
-            self.app.settings["inventory_csballs"] = inv
+        for v in CSBALL_VARIANTS:
+            if v["file"] not in inv:
+                inv.append(v["file"])
+        self.app.settings["inventory_csballs"] = inv
 
         self.app.save_settings()
 
@@ -442,11 +445,11 @@ class ShopScreen(Screen):
 
         pygame.draw.line(surface, (80, 70, 35), (60, 350), (540, 350), 1)
 
-        is_owned = variant["file"] in inv
-        if is_owned:
-            render_text(surface, tr["shop_owned"], font_name, (100, 200, 100), 60, 360, 200)
+        all_owned = all(v["file"] in inv for v in BKBALL_VARIANTS)
+        if all_owned:
+            render_text(surface, tr["shop_set_owned"], font_name, (100, 200, 100), 60, 360, 200)
         else:
-            price_text = tr["shop_price"].format(variant["price"])
+            price_text = tr["shop_price"].format(SET_PRICE)
             render_text(surface, price_text, font_price, (220, 180, 50), 60, 365, 200)
 
             btn_rect = pygame.Rect(400, 355, 130, 38)
@@ -454,7 +457,7 @@ class ShopScreen(Screen):
             color = (240, 200, 60) if mouse_over else (200, 170, 40)
             pygame.draw.rect(surface, color, btn_rect, border_radius=6)
             pygame.draw.rect(surface, (140, 110, 25), btn_rect, 1, border_radius=6)
-            buy_txt = strip_emoji(tr["shop_buy"])
+            buy_txt = strip_emoji(tr["shop_set_buy"])
             buy_font = get_font(14, bold=True)
             buy_surf = buy_font.render(buy_txt, True, (30, 25, 10))
             surface.blit(buy_surf, (btn_rect.centerx - buy_surf.get_width() // 2,
@@ -533,11 +536,11 @@ class ShopScreen(Screen):
 
         pygame.draw.line(surface, (90, 110, 140), (60, 350), (540, 350), 1)
 
-        is_owned = variant["file"] in inv
-        if is_owned:
-            render_text(surface, tr["shop_owned"], font_name, (100, 200, 100), 60, 360, 200)
+        all_owned = all(v["file"] in inv for v in CSBALL_VARIANTS)
+        if all_owned:
+            render_text(surface, tr["shop_set_owned"], font_name, (100, 200, 100), 60, 360, 200)
         else:
-            price_text = tr["shop_price"].format(variant["price"])
+            price_text = tr["shop_price"].format(SET_PRICE)
             render_text(surface, price_text, font_price, (180, 220, 255), 60, 365, 200)
 
             btn_rect = pygame.Rect(400, 355, 130, 38)
@@ -545,7 +548,7 @@ class ShopScreen(Screen):
             color = (160, 200, 240) if mouse_over else (120, 160, 210)
             pygame.draw.rect(surface, color, btn_rect, border_radius=6)
             pygame.draw.rect(surface, (80, 110, 150), btn_rect, 1, border_radius=6)
-            buy_txt = strip_emoji(tr["shop_buy"])
+            buy_txt = strip_emoji(tr["shop_set_buy"])
             buy_font = get_font(14, bold=True)
             buy_surf = buy_font.render(buy_txt, True, (20, 30, 50))
             surface.blit(buy_surf, (btn_rect.centerx - buy_surf.get_width() // 2,
