@@ -465,21 +465,21 @@ class ShopScreen(Screen):
         inv = self.app.settings.get("inventory_csballs", [])
 
         card_rect = pygame.Rect(40, 100, 520, 310)
-        pygame.draw.rect(surface, (12, 28, 48), card_rect, border_radius=10)
-        pygame.draw.rect(surface, (80, 170, 230), card_rect, 2, border_radius=10)
+        pygame.draw.rect(surface, (52, 62, 80), card_rect, border_radius=10)
+        pygame.draw.rect(surface, (140, 180, 220), card_rect, 2, border_radius=10)
 
         title_font = get_font(18, bold=True)
-        render_text(surface, "CUSTOM BALLS", title_font, (100, 200, 255), 40, 108, 520)
-        render_text(surface, tr["custom_balls_subtitle"], font_small, (60, 130, 180), 40, 132, 520)
+        render_text(surface, "CUSTOM BALLS", title_font, (180, 220, 255), 40, 108, 520)
+        render_text(surface, tr["custom_balls_subtitle"], font_small, (120, 160, 200), 40, 132, 520)
 
-        pygame.draw.line(surface, (30, 80, 120), (60, 152), (540, 152), 1)
+        pygame.draw.line(surface, (90, 110, 140), (60, 152), (540, 152), 1)
 
         variant = CSBALL_VARIANTS[self.cs_selected_idx]
         thumbs = self._csball_thumbs.get(variant["file"])
 
         preview_bg = pygame.Rect(65, 168, 100, 100)
-        pygame.draw.rect(surface, (18, 38, 58), preview_bg, border_radius=8)
-        pygame.draw.rect(surface, (40, 100, 150), preview_bg, 1, border_radius=8)
+        pygame.draw.rect(surface, (40, 50, 68), preview_bg, border_radius=8)
+        pygame.draw.rect(surface, (100, 140, 180), preview_bg, 1, border_radius=8)
 
         if thumbs and "preview" in thumbs:
             preview = thumbs["preview"]
@@ -487,9 +487,9 @@ class ShopScreen(Screen):
             py = preview_bg.centery - preview.get_height() // 2
             surface.blit(preview, (px, py))
 
-        render_text(surface, variant["name"], font_name, (80, 170, 220), 65, 275, 100)
+        render_text(surface, variant["name"], font_name, (170, 210, 250), 65, 275, 100)
 
-        render_text(surface, tr["custom_balls_select"], font_small, (60, 130, 180), 200, 162, 200)
+        render_text(surface, tr["custom_balls_select"], font_small, (120, 160, 200), 200, 162, 200)
 
         swatch_size = 38
         swatch_gap = 8
@@ -507,16 +507,16 @@ class ShopScreen(Screen):
             is_owned = v["file"] in inv
 
             if is_selected:
-                bg = (20, 50, 80)
-                border = (100, 200, 255)
+                bg = (80, 100, 130)
+                border = (180, 220, 255)
                 bw = 2
             elif is_owned:
-                bg = (15, 45, 30)
-                border = (60, 160, 100)
+                bg = (30, 55, 40)
+                border = (80, 180, 100)
                 bw = 1
             else:
-                bg = (18, 38, 58)
-                border = (40, 80, 110)
+                bg = (40, 50, 68)
+                border = (70, 90, 120)
                 bw = 1
 
             pygame.draw.rect(surface, bg, swatch_rect, border_radius=5)
@@ -531,23 +531,23 @@ class ShopScreen(Screen):
 
             self.cs_swatch_rects.append(swatch_rect)
 
-        pygame.draw.line(surface, (30, 80, 120), (60, 350), (540, 350), 1)
+        pygame.draw.line(surface, (90, 110, 140), (60, 350), (540, 350), 1)
 
         is_owned = variant["file"] in inv
         if is_owned:
-            render_text(surface, tr["shop_owned"], font_name, (80, 200, 130), 60, 360, 200)
+            render_text(surface, tr["shop_owned"], font_name, (100, 200, 100), 60, 360, 200)
         else:
             price_text = tr["shop_price"].format(variant["price"])
-            render_text(surface, price_text, font_price, (100, 200, 255), 60, 365, 200)
+            render_text(surface, price_text, font_price, (180, 220, 255), 60, 365, 200)
 
             btn_rect = pygame.Rect(400, 355, 130, 38)
             mouse_over = btn_rect.collidepoint(pygame.mouse.get_pos())
-            color = (120, 210, 255) if mouse_over else (80, 170, 230)
+            color = (160, 200, 240) if mouse_over else (120, 160, 210)
             pygame.draw.rect(surface, color, btn_rect, border_radius=6)
-            pygame.draw.rect(surface, (40, 100, 150), btn_rect, 1, border_radius=6)
+            pygame.draw.rect(surface, (80, 110, 150), btn_rect, 1, border_radius=6)
             buy_txt = strip_emoji(tr["shop_buy"])
             buy_font = get_font(14, bold=True)
-            buy_surf = buy_font.render(buy_txt, True, (10, 25, 45))
+            buy_surf = buy_font.render(buy_txt, True, (20, 30, 50))
             surface.blit(buy_surf, (btn_rect.centerx - buy_surf.get_width() // 2,
                                     btn_rect.centery - buy_surf.get_height() // 2))
             self.cs_buy_rect = btn_rect

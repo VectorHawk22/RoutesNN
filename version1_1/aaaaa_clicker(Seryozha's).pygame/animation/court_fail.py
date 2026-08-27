@@ -6,6 +6,7 @@ class CourtFail(CourtBase):
     def __init__(self, ball_file="ball3.png", basket_file="basket.png"):
         super().__init__(ball_file, basket_file)
         self._rim_front_x = 0
+        self._rim_r = 0
         self._miss_variant = 0
 
     def prepare(self, court_w, court_h):
@@ -13,6 +14,7 @@ class CourtFail(CourtBase):
         from animation.rim_config import get_rim_calibration
         cal = get_rim_calibration(self.basket_file)
         self._rim_front_x = self._basket_left_x + int(self.basket_w * cal["x0"])
+        self._rim_r = max(3, self._rim_x - self._rim_front_x)
 
     def start_animation(self, court_w, court_h):
         self.prepare(court_w, court_h)
@@ -25,24 +27,27 @@ class CourtFail(CourtBase):
         self._frame_counter = 0
         self._jump_t = 0
         self._man_offset_y = 0.0
+        self._spin_frame = 0
+        self._man_descending = False
+        self._man_descend_t = 0
+        self._man_descent_tick = 0
 
         if variant == 0:
-            impact_x = float(self._rim_front_x + self.ball_r)
-            impact_y = float(self._rim_y)
+            impact_x = float(self._rim_front_x)
+            impact_y = float(self._rim_y - self.ball_r)
         elif variant == 1:
-            rim_back_x = self._rim_x + (self._rim_x - self._rim_front_x)
+            rim_back_x = self._rim_front_x + 2 * self._rim_r
             impact_x = float(rim_back_x)
             impact_y = float(self._rim_y - 2)
         elif variant == 2:
-            impact_x = float(self._rim_x - 5)
-            impact_y = float(self._rim_y - 12)
+            impact_x = float(self._rim_front_x - self.ball_r)
+            impact_y = float(self._rim_y)
         else:
-            impact_x = float(self._rim_front_x - 3)
-            impact_y = float(self._rim_y + 5)
+            impact_x = float(self._rim_front_x)
+            impact_y = float(self._rim_y + self.ball_r)
 
         self.target_x = impact_x
         self.target_y = impact_y
-        self._plan_flight(impact_x, impact_y)
 
     def update(self):
         if self.state == "idle":
@@ -57,14 +62,18 @@ class CourtFail(CourtBase):
             self._jump_t += 1
             progress = self._jump_t / self._jump_duration
             self._man_offset_y = self._jump_peak * (1.0 - (1.0 - progress) ** 2)
+            self.ball_y = float(self._rest_y) + self._man_offset_y
             if self._jump_t >= self._jump_duration:
                 self._man_offset_y = float(self._jump_peak)
                 self.state = "flying"
                 self.ball_x = float(self._rest_x)
-                self.ball_y = float(self._rest_y)
+                self.ball_y = float(self._rest_y) + self._man_offset_y
+                self._plan_flight(self.target_x, self.target_y)
+                self._man_descent_tick = 1
             return
 
         if self.state == "bouncing":
+            self._update_man_descent()
             if self.ball_y < self._ground_y:
                 self.ball_x += self.flight_vx
                 self.ball_y += self.flight_vy
@@ -91,6 +100,7 @@ class CourtFail(CourtBase):
             return
 
         if self.state == "flying":
+            self._update_man_descent()
             self.flight_t += 1.0
             if self.flight_t >= self.flight_T:
                 self.state = "bouncing"
@@ -119,10 +129,7 @@ class CourtFail(CourtBase):
             return
 
         if self.state == "jumping_down":
-            self._jump_t += 1
-            progress = self._jump_t / self._jump_duration
-            self._man_offset_y = self._jump_peak * (1.0 - progress)
-            if self._jump_t >= self._jump_duration:
-                self._man_offset_y = 0.0
+            self._update_man_descent()
+            if not self._man_descending and self._man_offset_y == 0.0:
                 self.state = "idle"
             return

@@ -1,8 +1,8 @@
 {
     "sound": true,
     "language": "Русский",
-    "skin_ball": "bkball6.png",
-    "skin_basket": "basket2.png",
+    "skin_ball": "ball2.png",
+    "skin_basket": "basket.png",
     "inventory_balls": [
         "ball1.png",
         "ball2.png",
@@ -24,5 +24,5 @@
         "bkball4.png"
     ],
     "inventory_csballs": [],
-    "_v": "d5807230c8d97cbba01dd3c9f605be9b975d49896dd625f7ac3901e1c057c1d5"
+    "_v": "e20f96fd32ffc547e059cd4ae4e41a56f63e1b4ea5c582ba83251f4c806f1170"
 }
