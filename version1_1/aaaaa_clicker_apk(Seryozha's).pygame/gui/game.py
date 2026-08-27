@@ -187,6 +187,24 @@ class GameScreen(Screen):
         elif self.result_type == "miss":
             render_text(surface, tr["miss"], font_result, (200, 0, 0), 30, 285, 400)
 
+        # Live score counter drawn at the basket backboard (top-right of the
+        # court). Replaces the old static "25" decal that used to be baked into
+        # basket2.png - now it shows the real current score.
+        font_score = get_font(13, bold=True)
+        score_txt = str(self.app.game.get_points())
+        score_surf = font_score.render(score_txt, True, (200, 0, 0))
+        c = self.court_success
+        br_right = COURT_X + c._basket_left_x + c.basket_w
+        br_top = COURT_Y + c._sky_h - c.basket_h
+        score_x = br_right - score_surf.get_width() - 4
+        score_y = max(3, br_top - score_surf.get_height() - 2)
+        box = pygame.Rect(score_x - 3, score_y - 2,
+                          score_surf.get_width() + 6, score_surf.get_height() + 4)
+        bbox = pygame.Surface((box.w, box.h), pygame.SRCALPHA)
+        bbox.fill((255, 255, 255, 160))
+        surface.blit(bbox, (box.x, box.y))
+        surface.blit(score_surf, (score_x, score_y))
+
         if self.game_state == "result":
             score_text = tr["score_message"].format(self.click_count)
             render_text(surface, score_text, font_result, (0, 0, 200), 30, 310, 400)
