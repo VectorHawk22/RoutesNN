@@ -103,7 +103,7 @@ class GameScreen(Screen):
         self._update_button_text()
 
     def _process_result(self):
-        success, _ = self.app.game.try_add_point(self.click_count)
+        success, _, added = self.app.game.try_add_point(self.click_count)
         self.court_success.stop()
         self.court_fail.stop()
 
@@ -118,7 +118,7 @@ class GameScreen(Screen):
         self._update_button_text()
 
         if success:
-            self._float_text = "+1"
+            self._float_text = f"+{added}"
             self._float_color = (0, 200, 0)
             self._float_y = 150.0
             self._float_timer = 40

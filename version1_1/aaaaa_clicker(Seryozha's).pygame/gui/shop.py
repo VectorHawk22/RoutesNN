@@ -245,7 +245,6 @@ class ShopScreen(Screen):
             return
 
         self.app.game.points -= item["price"]
-        self.app.game.save_game()
 
         inv_key = "inventory_balls" if kind == "ball" else "inventory_baskets"
         inv = self.app.settings.get(inv_key, [])
@@ -269,7 +268,6 @@ class ShopScreen(Screen):
             return
 
         self.app.game.points -= SET_PRICE
-        self.app.game.save_game()
 
         for v in BKBALL_VARIANTS:
             if v["file"] not in inv:
@@ -291,7 +289,6 @@ class ShopScreen(Screen):
             return
 
         self.app.game.points -= SET_PRICE
-        self.app.game.save_game()
 
         for v in CSBALL_VARIANTS:
             if v["file"] not in inv:

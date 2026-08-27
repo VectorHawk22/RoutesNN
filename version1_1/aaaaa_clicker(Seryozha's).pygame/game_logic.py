@@ -20,19 +20,20 @@ class ClickerGame:
 
     def try_add_point(self, clicks):
         if clicks == 0:
-            return False, 0.0
+            return False, 0.0, 0
 
         base_chance = 0.3
         luck_factor = min(clicks * 0.05, 0.7)
         total_chance = min(base_chance + luck_factor, 0.95)
         success = random.random() < total_chance
+        points_to_add = 0
 
         if success:
             points_to_add = 2 if self.is_potion_active() else 1
             self.points += points_to_add
             self.save_game()
 
-        return success, total_chance
+        return success, total_chance, points_to_add
 
     def get_points(self):
         return self.points
