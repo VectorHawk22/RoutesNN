@@ -27,7 +27,10 @@ class App:
         flags = 0
         if self.on_android:
             flags = pygame.FULLSCREEN | pygame.SCALED
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT), flags)
+        try:
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT), flags)
+        except Exception:
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Basketball Click")
 
         icon_path = os.path.join(paths.assets_dir(), "animation", "icon.jpg")

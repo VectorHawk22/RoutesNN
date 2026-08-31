@@ -1,5 +1,6 @@
 import pygame
 from gui import Screen, Button, Checkbox, Dropdown, get_font, render_text, strip_emoji
+from gui.inputbox import InputBox
 
 
 class SettingsScreen(Screen):
@@ -27,6 +28,7 @@ class SettingsScreen(Screen):
                 "Французский": "法语", "Немецкий": "德语", "Китайский": "中文"
             },
         }
+        self.active_tab = "game"
         self._build_ui()
 
     def _build_ui(self):
@@ -41,22 +43,63 @@ class SettingsScreen(Screen):
             self.app.settings.get("language", "Русский"),
             self.app.settings.get("language", "Русский"))
 
+        tab_w = 130
+        is_game = self.active_tab == "game"
+        is_promos = self.active_tab == "promos"
+        self.btn_tab_game = Button(
+            (40, 55, tab_w, 35), tr["settings_title"], font_size=12,
+            bg_color=(180, 220, 255) if is_game else (220, 220, 220),
+            callback=lambda: self._switch_tab("game"))
+        self.btn_tab_promos = Button(
+            (175, 55, tab_w, 35), tr["promos_title"], font_size=12,
+            bg_color=(255, 225, 130) if is_promos else (220, 220, 220),
+            callback=lambda: self._switch_tab("promos"))
+
         self.lang_dropdown = Dropdown(
-            (300, 100, 250, 35), display_langs, font_size=13,
+            (300, 110, 250, 35), display_langs, font_size=13,
             selected=current_display, callback=self._on_lang_change)
 
         self.sound_checkbox = Checkbox(
-            (300, 160, 200, 30), tr["sound_on"], font_size=13,
+            (300, 170, 200, 30), tr["sound_on"], font_size=13,
             checked=self.app.settings.get("sound", True),
             callback=self._on_sound_toggle)
 
         self.btn_save = Button(
-            (40, 230, 520, 45), tr["save_button"], font_size=14,
+            (40, 240, 520, 45), tr["save_button"], font_size=14,
             bg_color=(144, 238, 144), callback=self._on_save)
 
         self.btn_reset = Button(
-            (40, 290, 520, 45), tr["reset_button"], font_size=14,
+            (40, 300, 520, 45), tr["reset_button"], font_size=14,
             bg_color=(240, 128, 128), callback=self._on_reset)
+
+        self.promo_input = InputBox(
+            (40, 150, 380, 38), font_size=15, max_length=32,
+            placeholder="", callback=self._on_promo_activate_enter)
+
+        self.btn_promo = Button(
+            (425, 150, 135, 38), tr["promo_activate"], font_size=13,
+            bg_color=(255, 215, 0), callback=self._on_promo_activate)
+
+    def _switch_tab(self, name):
+        self.active_tab = name
+        self._build_ui()
+
+    def _on_promo_activate_enter(self, text):
+        if text.strip():
+            self._on_promo_activate()
+
+    def _on_promo_activate(self):
+        tr = self.app.translations[self.app.current_lang]
+        code = self.promo_input.text
+        if not code.strip():
+            self.app.dialog.show_info(tr["promos_title"], tr["promo_empty"])
+            return
+        amount = self.app.game.redeem_promo(code)
+        self.promo_input.clear()
+        if amount:
+            self.app.dialog.show_info(tr["promos_title"], tr["promo_success"].format(amount))
+        else:
+            self.app.dialog.show_info(tr["promos_title"], tr["promo_fail"])
 
     def _on_lang_change(self, display):
         key = self._lang_key_map.get(display, display)
@@ -88,24 +131,38 @@ class SettingsScreen(Screen):
                                           f"{tr['reset_error']}:\n{e}")
 
     def handle_event(self, event):
-        if self.lang_dropdown.handle_event(event):
-            return
-        self.sound_checkbox.handle_event(event)
-        self.btn_save.handle_event(event)
-        self.btn_reset.handle_event(event)
+        self.btn_tab_game.handle_event(event)
+        self.btn_tab_promos.handle_event(event)
+        if self.active_tab == "game":
+            self.lang_dropdown.handle_event(event)
+            self.sound_checkbox.handle_event(event)
+            self.btn_save.handle_event(event)
+            self.btn_reset.handle_event(event)
+        else:
+            self.promo_input.handle_event(event)
+            self.btn_promo.handle_event(event)
 
     def draw(self, surface):
         tr = self.app.translations[self.app.current_lang]
         font_title = get_font(22, bold=True)
         font_label = get_font(14)
 
-        render_text(surface, tr["settings_title"], font_title, (0, 0, 0), 40, 25, 520)
+        render_text(surface, tr["settings_title"], font_title, (0, 0, 0), 40, 15, 520)
 
-        render_text(surface, tr["language_label"], font_label, (0, 0, 0), 40, 107, 250)
-        self.lang_dropdown.draw(surface)
+        self.btn_tab_game.draw(surface)
+        self.btn_tab_promos.draw(surface)
 
-        if not self.lang_dropdown.open:
-            render_text(surface, tr["sound_label"], font_label, (0, 0, 0), 40, 165, 250)
-            self.sound_checkbox.draw(surface)
-            self.btn_save.draw(surface)
-            self.btn_reset.draw(surface)
+        if self.active_tab == "game":
+            render_text(surface, tr["language_label"], font_label, (0, 0, 0), 40, 115, 250)
+            self.lang_dropdown.draw(surface)
+
+            if not self.lang_dropdown.open:
+                render_text(surface, tr["sound_label"], font_label, (0, 0, 0), 40, 175, 250)
+                self.sound_checkbox.draw(surface)
+                self.btn_save.draw(surface)
+                self.btn_reset.draw(surface)
+        else:
+            render_text(surface, tr["promo_label"], font_label, (0, 0, 0), 40, 112, 380)
+            pygame.draw.line(surface, (180, 180, 180), (40, 210), (560, 210), 1)
+            self.promo_input.draw(surface)
+            self.btn_promo.draw(surface)

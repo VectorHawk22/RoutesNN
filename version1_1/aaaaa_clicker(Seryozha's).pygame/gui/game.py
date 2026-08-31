@@ -1,3 +1,4 @@
+import os
 import pygame
 from gui import Screen, Button, get_font, render_text, strip_emoji
 from animation.court_success import CourtSuccess
@@ -187,23 +188,26 @@ class GameScreen(Screen):
         elif self.result_type == "miss":
             render_text(surface, tr["miss"], font_result, (200, 0, 0), 30, 285, 400)
 
-        # Live score counter drawn at the basket backboard (top-right of the
-        # court). Replaces the old static "25" decal that used to be baked into
-        # basket2.png - now it shows the real current score.
-        font_score = get_font(13, bold=True)
-        score_txt = str(self.app.game.get_points())
-        score_surf = font_score.render(score_txt, True, (200, 0, 0))
+        # Live score counter, drawn only inside the backboard square of Hoop 2
+        # (basket2.png) itself. Numbers above 1000 are shown as "999+".
         c = self.court_success
-        br_right = COURT_X + c._basket_left_x + c.basket_w
-        br_top = COURT_Y + c._sky_h - c.basket_h
-        score_x = br_right - score_surf.get_width() - 4
-        score_y = max(3, br_top - score_surf.get_height() - 2)
-        box = pygame.Rect(score_x - 3, score_y - 2,
-                          score_surf.get_width() + 6, score_surf.get_height() + 4)
-        bbox = pygame.Surface((box.w, box.h), pygame.SRCALPHA)
-        bbox.fill((255, 255, 255, 160))
-        surface.blit(bbox, (box.x, box.y))
-        surface.blit(score_surf, (score_x, score_y))
+        basket_name = os.path.basename(c.basket_file) if c.basket_file else ""
+        if basket_name == "basket2.png":
+            points = self.app.game.get_points()
+            score_txt = "999+" if points > 1000 else str(points)
+            font_score = get_font(9, bold=True)
+            score_surf = font_score.render(score_txt, True, (200, 0, 0))
+            bl = COURT_X + c._basket_left_x
+            bt = COURT_Y + c._sky_h - c.basket_h
+            bb_cx = bl + int(c.basket_w * 0.708)
+            bb_cy = bt + int(c.basket_h * 0.074)
+            box = pygame.Rect(0, 0, score_surf.get_width() + 4,
+                              score_surf.get_height() + 2)
+            box.center = (bb_cx, bb_cy)
+            bbox = pygame.Surface((box.w, box.h), pygame.SRCALPHA)
+            bbox.fill((255, 255, 255, 170))
+            surface.blit(bbox, (box.x, box.y))
+            surface.blit(score_surf, (box.x + 2, box.y + 1))
 
         if self.game_state == "result":
             score_text = tr["score_message"].format(self.click_count)

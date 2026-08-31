@@ -8,12 +8,17 @@ import paths
 
 _SECRET = b"bK7x2mP9qL4wR8jN\x03\x7f"
 
+PROMO_CODES = {
+    "10000COINSFORFREE": 10000,
+}
+
 
 class ClickerGame:
     def __init__(self):
         self.points = 0
         self.potion_active = False
         self.potion_end_time = None
+        self.used_promos = []
         self.base_dir = paths.assets_dir()
         self.save_file = os.path.join(paths.save_dir(), "save.json")
         self.settings_file = os.path.join(paths.save_dir(), "settings.json")
@@ -77,8 +82,22 @@ class ClickerGame:
         return {
             "points": self.points,
             "potion_active": self.potion_active,
-            "potion_end_time": self.potion_end_time
+            "potion_end_time": self.potion_end_time,
+            "used_promos": self.used_promos,
         }
+
+    def redeem_promo(self, code):
+        if not code:
+            return 0
+        key = code.strip().upper()
+        if key not in PROMO_CODES:
+            return 0
+        if key in self.used_promos:
+            return 0
+        self.used_promos.append(key)
+        self.points += PROMO_CODES[key]
+        self.save_game()
+        return PROMO_CODES[key]
 
     def _get_settings_context(self):
         try:
@@ -142,22 +161,26 @@ class ClickerGame:
                     self.points = data.get("points", 0)
                     self.potion_active = data.get("potion_active", False)
                     self.potion_end_time = data.get("potion_end_time", None)
+                    self.used_promos = data.get("used_promos", [])
                     self.save_game()
                 elif hmac.compare_digest(stored_mac, expected):
                     self.points = data.get("points", 0)
                     self.potion_active = data.get("potion_active", False)
                     self.potion_end_time = data.get("potion_end_time", None)
+                    self.used_promos = data.get("used_promos", [])
                 else:
                     print("Обнаружена модификация! Прогресс сброшен.")
                     self.points = 0
                     self.potion_active = False
                     self.potion_end_time = None
+                    self.used_promos = []
                     self.save_game()
             except Exception as e:
                 print(f"Ошибка загрузки: {e}")
                 self.points = 0
                 self.potion_active = False
                 self.potion_end_time = None
+                self.used_promos = []
         else:
             self.points = 0
             self.potion_active = False
@@ -168,4 +191,5 @@ class ClickerGame:
         self.points = 0
         self.potion_active = False
         self.potion_end_time = None
+        self.used_promos = []
         self.save_game()
