@@ -1,15 +1,21 @@
-import pygame
-from gui.utils import get_font, render_text, strip_emoji
+# -*- coding: utf-8 -*-
+"""Modal confirm/info dialog drawn as an overlay over the whole board."""
+from gui.painter import Painter, BOARD_W, BOARD_H
 
 
 class Dialog:
+    BOX = (100, 150, 400, 190)
+    BTN_H = 35
+    BTN_W = 120
+    BTN_GAP = 15
+
     def __init__(self):
         self.active = False
         self.title = ""
         self.message = ""
-        self.buttons = []
+        self.buttons = []            # list of (text, value)
         self.callback = None
-        self._btn_rects = []
+        self._btn_rects = []         # (x, y, w, h) top-left
         self.yes_text = "Yes"
         self.no_text = "No"
 
@@ -19,6 +25,7 @@ class Dialog:
         self.buttons = [("OK", True)]
         self.callback = None
         self.active = True
+        self._layout()
 
     def show_confirm(self, title, message, on_yes, yes_text="Yes", no_text="No"):
         self.title = title
@@ -28,53 +35,48 @@ class Dialog:
         self.buttons = [(yes_text, True), (no_text, False)]
         self.callback = on_yes
         self.active = True
+        self._layout()
 
-    def handle_event(self, event):
+    def _layout(self):
+        bx, by, bw, bh = self.BOX
+        n = len(self.buttons)
+        total_w = n * self.BTN_W + (n - 1) * self.BTN_GAP
+        start_x = bx + (bw - total_w) // 2
+        btn_y = by + bh - 50
+        self._btn_rects = []
+        for i, (text, value) in enumerate(self.buttons):
+            self._btn_rects.append((start_x + i * (self.BTN_W + self.BTN_GAP),
+                                    btn_y, self.BTN_W, self.BTN_H))
+
+    def touch_down(self, x, y):
         if not self.active:
             return False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for rect, text, value in self._btn_rects:
-                if rect.collidepoint(event.pos):
-                    self.active = False
-                    if self.callback:
-                        self.callback(value)
-                    return True
+        for (rx, ry, rw, rh), (text, value) in zip(self._btn_rects, self.buttons):
+            if rx <= x <= rx + rw and ry <= y <= ry + rh:
+                self.active = False
+                cb = self.callback
+                self.callback = None
+                if cb:
+                    cb(value)
+                return True
         return True
 
-    def draw(self, surface):
+    def touch_up(self, x, y):
+        return self.active
+
+    def draw(self, painter):
         if not self.active:
             return
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 128))
-        surface.blit(overlay, (0, 0))
-
-        box = pygame.Rect(100, 150, 400, 190)
-        pygame.draw.rect(surface, (255, 255, 255), box, border_radius=10)
-        pygame.draw.rect(surface, (100, 100, 100), box, 2, border_radius=10)
-
-        title_font = get_font(18, bold=True)
-        render_text(surface, self.title, title_font, (0, 0, 0), box.x + 20, box.y + 15, box.width - 40)
-
-        msg_font = get_font(14)
-        render_text(surface, self.message, msg_font, (60, 60, 60), box.x + 20, box.y + 50, box.width - 40)
-
-        self._btn_rects = []
-        btn_w = 120
-        btn_h = 35
-        total_w = len(self.buttons) * btn_w + max(0, len(self.buttons) - 1) * 15
-        btn_x = box.centerx - total_w // 2
-        btn_y = box.bottom - 50
-
-        btn_font = get_font(14, bold=True)
-        for text, value in self.buttons:
-            rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
-            mouse_over = rect.collidepoint(pygame.mouse.get_pos())
-            color = (220, 220, 220) if mouse_over else (200, 200, 200)
-            pygame.draw.rect(surface, color, rect, border_radius=5)
-            pygame.draw.rect(surface, (100, 100, 100), rect, 1, border_radius=5)
-            txt = strip_emoji(text)
-            txt_surf = btn_font.render(txt, True, (0, 0, 0))
-            surface.blit(txt_surf, (rect.centerx - txt_surf.get_width() // 2,
-                                    rect.centery - txt_surf.get_height() // 2))
-            self._btn_rects.append((rect, text, value))
-            btn_x += btn_w + 15
+        painter.rect(0, 0, BOARD_W, BOARD_H, (0, 0, 0, 128))
+        bx, by, bw, bh = self.BOX
+        painter.rounded(bx, by, bw, bh, (255, 255, 255), radius=10)
+        painter.outline(bx, by, bw, bh, (100, 100, 100), width=2)
+        painter.text(self.title, 18, (0, 0, 0), bx + 20, by + 15,
+                     bold=True, max_width=bw - 40)
+        painter.text(self.message, 14, (60, 60, 60), bx + 20, by + 50,
+                     max_width=bw - 40)
+        for (rx, ry, rw, rh), (text, value) in zip(self._btn_rects, self.buttons):
+            painter.rounded(rx, ry, rw, rh, (200, 200, 200), radius=5)
+            painter.outline(rx, ry, rw, rh, (100, 100, 100), width=1)
+            painter.text_centered_in(text, 14, (0, 0, 0),
+                                     rx, ry, rw, rh, bold=True)

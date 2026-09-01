@@ -10,8 +10,8 @@ android.version_code = 1
 # ===== Источники =====
 # Папка, в которой лежит игра (buildozer запускается из неё)
 source.dir = .
-source.include_exts = py,png,jpg,jpeg,json,txt
-source.exclude_exts = pyc,pyo,md
+source.include_exts = py,png,jpg,jpeg,json,txt,kv,ttf,ttc
+source.exclude_exts = pyc,pyo,md,bak,spec
 
 # ===== Ориентация и полноэкранный режим =====
 android.orientation = landscape
@@ -26,11 +26,11 @@ android.target_sdk_version = 33
 android.archs = arm64-v8a, armeabi-v7a
 
 # ===== Зависимости =====
-# pygame - движок; pillow - работа с картинками (обрезка/поворот)
-requirements = python3,pygame,pillow
+# kivy - движок GUI; pillow - работа с картинками (обрезка/поворот)
+requirements = python3,kivy,pillow
 
 # ===== Bootstrap (движок окна на Android) =====
-# pygame 2 работает через SDL2
+# Kivy работает через SDL2
 p4a.bootstrap = sdl2
 
 # ===== Прочее =====

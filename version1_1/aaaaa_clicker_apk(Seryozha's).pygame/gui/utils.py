@@ -1,6 +1,11 @@
-import pygame
-import platform
+# -*- coding: utf-8 -*-
+"""Kivy port of the old pygame font helpers.
 
+Text is rendered with kivy.core.text.CoreLabel (cached). Latin and Cyrillic
+use Kivy's bundled Roboto; Chinese uses the bundled fonts/msyh.ttc when a
+Chinese glyph is detected.
+"""
+import os
 
 _CJK_RANGES = (
     (0x4E00, 0x9FFF), (0x3400, 0x4DBF), (0xF900, 0xFAFF),
@@ -12,9 +17,9 @@ _CYRILLIC_RANGES = (
     (0xA640, 0xA69F),
 )
 
-_FONT_CJK = "Microsoft YaHei"
-_FONT_CYRILLIC = "Segoe UI"
-_FONT_FALLBACK = "Arial"
+_CJK_FONT_NAME = None
+_FONTS_REGISTERED = False
+_LABEL_CACHE = {}
 
 
 def _has_cjk(text):
@@ -35,38 +40,6 @@ def _has_cyrillic(text):
     return False
 
 
-def _try_font(name, size, bold):
-    try:
-        f = pygame.font.SysFont(name, size, bold=bold)
-        if f:
-            return f
-    except Exception:
-        pass
-    return None
-
-
-def get_font(size, bold=False):
-    if platform.system() == "Windows":
-        f = _try_font(_FONT_CYRILLIC, size, bold)
-        if f:
-            return f
-    return pygame.font.SysFont(_FONT_FALLBACK, size, bold=bold)
-
-
-def get_font_for(text, size, bold=False):
-    if _has_cjk(text):
-        if platform.system() == "Windows":
-            f = _try_font(_FONT_CJK, size, bold)
-            if f:
-                return f
-    if _has_cyrillic(text):
-        if platform.system() == "Windows":
-            f = _try_font(_FONT_CYRILLIC, size, bold)
-            if f:
-                return f
-    return get_font(size, bold)
-
-
 def strip_emoji(text):
     clean = []
     for ch in text:
@@ -76,36 +49,69 @@ def strip_emoji(text):
     return "".join(clean)
 
 
-def render_text(surface, text, font, color, x, y, max_width=None):
-    lines = strip_emoji(text).split("\n")
-    y_offset = 0
-    sz = font.get_linesize()
-    for line in lines:
-        if _has_cjk(line) or _has_cyrillic(line):
-            use_font = get_font_for(line, sz, bold=font.get_bold())
-        else:
-            use_font = font
-        surf = use_font.render(line, True, color)
-        if max_width and surf.get_width() > max_width:
-            words = line.split(" ")
-            current = ""
-            for word in words:
-                test = current + (" " if current else "") + word
-                if use_font.size(test)[0] > max_width and current:
-                    surface.blit(use_font.render(current, True, color), (x, y + y_offset))
-                    y_offset += use_font.get_linesize()
-                    current = word
-                else:
-                    current = test
-            if current:
-                surface.blit(use_font.render(current, True, color), (x, y + y_offset))
-                y_offset += use_font.get_linesize()
-        else:
-            surface.blit(surf, (x, y + y_offset))
-            y_offset += use_font.get_linesize()
-    return y_offset
+def _fonts_dir():
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(here, "fonts")
 
 
-def text_height(font, text):
-    lines = strip_emoji(text).split("\n")
-    return len(lines) * font.get_linesize()
+def register_fonts():
+    """Register bundled fonts with Kivy (Roboto ships with Kivy itself)."""
+    global _CJK_FONT_NAME, _FONTS_REGISTERED
+    if _FONTS_REGISTERED:
+        return
+    _FONTS_REGISTERED = True
+    from kivy.core.text import LabelBase
+    path = os.path.join(_fonts_dir(), "msyh.ttc")
+    if os.path.exists(path):
+        _CJK_FONT_NAME = "GameCJK"
+        LabelBase.register(name="GameCJK", fn_regular=path, fn_bold=path)
+
+
+def font_name_for(text):
+    register_fonts()
+    if _has_cjk(text) and _CJK_FONT_NAME:
+        return _CJK_FONT_NAME
+    return "Roboto"
+
+
+def _rgba(color, alpha=1.0):
+    if len(color) == 3:
+        r, g, b = color
+        a = alpha
+    else:
+        r, g, b, a = color
+        a = a * alpha
+    return (r / 255.0, g / 255.0, b / 255.0, a)
+
+
+def make_label(text, size, bold=False, color=(0, 0, 0)):
+    """Return a refreshed CoreLabel for the given text/params (cached)."""
+    key = (text, int(size), bool(bold), tuple(color))
+    label = _LABEL_CACHE.get(key)
+    if label is None:
+        from kivy.core.text import Label as CoreLabel
+        label = CoreLabel(
+            text=text,
+            font_size=float(size),
+            bold=bold,
+            font_name=font_name_for(text),
+            color=_rgba(color),
+        )
+        label.refresh()
+        if len(_LABEL_CACHE) > 900:
+            _LABEL_CACHE.clear()
+        _LABEL_CACHE[key] = label
+    return label
+
+
+def text_size(text, size, bold=False):
+    """Width/height of the wrapped text (roughly), in virtual pixels."""
+    label = make_label(text, size, bold)
+    if label.texture is None:
+        return 0, 0
+    return label.texture.width, label.texture.height
+
+
+# Kept for API compatibility with older helpers.
+def get_linesize(size, bold=False):
+    return max(1, int(size * 1.2))
