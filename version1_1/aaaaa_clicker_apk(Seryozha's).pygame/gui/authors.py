@@ -1,17 +1,16 @@
-import pygame
-from gui import Screen, get_font, strip_emoji, render_text
+# -*- coding: utf-8 -*-
+"""Authors screen: credits text."""
+from gui.screen import Screen
 
 
 class AuthorsScreen(Screen):
     def __init__(self, app):
         super().__init__(app)
 
-    def draw(self, surface):
+    def draw(self, painter):
         tr = self.app.translations[self.app.current_lang]
-        font_title = get_font(20, bold=True)
-        font_body = get_font(14)
-
-        render_text(surface, tr["btn_authors"], font_title, (0, 0, 0), 40, 30, 520)
+        painter.text(tr["btn_authors"], 20, (0, 0, 0), 40, 30,
+                     bold=True, max_width=520)
 
         lines = [
             "",
@@ -28,5 +27,5 @@ class AuthorsScreen(Screen):
         ]
         y = 80
         for line in lines:
-            render_text(surface, line, font_body, (40, 40, 40), 60, y, 480)
+            painter.text(line, 14, (40, 40, 40), 60, y, max_width=480)
             y += 24

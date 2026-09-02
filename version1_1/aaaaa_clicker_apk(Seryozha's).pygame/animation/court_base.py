@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+"""Court renderer (Kivy textures + painter drawing, pygame-free).
+
+Keeps the original geometry and animation state machine intact.
+"""
 import os
-import pygame
+
 from PIL import Image as PILImage
+
 from animation.rim_config import get_rim_calibration
-from animation.assets import load_pil_cropped, pil_to_pygame
+from animation.assets import load_pil_cropped, pil_to_texture
 
 
 class CourtBase:
@@ -100,7 +106,8 @@ class CourtBase:
 
     def prepare(self, court_w, court_h):
         key = (court_w, court_h)
-        if self._prepared_size == key and self.img_man and self.img_man_jump and self.img_man_ball and self.img_basket and self.img_ball:
+        if (self._prepared_size == key and self.img_man and self.img_man_jump
+                and self.img_man_ball and self.img_basket and self.img_ball):
             return
 
         self._court_w = court_w
@@ -116,46 +123,48 @@ class CourtBase:
             w, h = self._pil_man.size
             nw = max(1, int(w * man_target_h / h))
             nh = max(1, man_target_h)
-            self.img_man = pil_to_pygame(self._pil_man.resize((nw, nh)))
+            self.img_man = pil_to_texture(self._pil_man.resize((nw, nh)))
             self.man_w, self.man_h = nw, nh
 
         if self._pil_man_jump:
             w, h = self._pil_man_jump.size
             nw = max(1, int(w * man_target_h / h))
             nh = max(1, man_target_h)
-            self.img_man_jump = pil_to_pygame(self._pil_man_jump.resize((nw, nh)))
+            self.img_man_jump = pil_to_texture(self._pil_man_jump.resize((nw, nh)))
 
         if self._pil_man_ball:
             w, h = self._pil_man_ball.size
             nw = max(1, int(w * man_target_h / h))
             nh = max(1, man_target_h)
-            self.img_man_ball = pil_to_pygame(self._pil_man_ball.resize((nw, nh)))
+            self.img_man_ball = pil_to_texture(self._pil_man_ball.resize((nw, nh)))
 
         if self._pil_basket:
             w, h = self._pil_basket.size
             nw = max(1, int(w * basket_target_h / h))
             nh = max(1, basket_target_h)
-            self.img_basket = pil_to_pygame(self._pil_basket.resize((nw, nh)))
+            self.img_basket = pil_to_texture(self._pil_basket.resize((nw, nh)))
             self.basket_w, self.basket_h = nw, nh
 
         if self._pil_ball:
             w, h = self._pil_ball.size
             nw = max(1, int(w * ball_target / h))
             nh = max(1, ball_target)
-            self.img_ball = pil_to_pygame(self._pil_ball.resize((nw, nh)))
+            self.img_ball = pil_to_texture(self._pil_ball.resize((nw, nh)))
             self.ball_r = max(5, nw // 2)
 
-            rot_left = self._pil_ball.rotate(90, expand=True, resample=PILImage.BICUBIC)
+            rot_left = self._pil_ball.rotate(90, expand=True,
+                                             resample=PILImage.BICUBIC)
             rl_w, rl_h = rot_left.size
             rl_nw = max(1, int(rl_w * ball_target / rl_h))
             rl_nh = max(1, ball_target)
-            self.img_ball_rot_left = pil_to_pygame(rot_left.resize((rl_nw, rl_nh)))
+            self.img_ball_rot_left = pil_to_texture(rot_left.resize((rl_nw, rl_nh)))
 
-            rot_right = self._pil_ball.rotate(-90, expand=True, resample=PILImage.BICUBIC)
+            rot_right = self._pil_ball.rotate(-90, expand=True,
+                                              resample=PILImage.BICUBIC)
             rr_w, rr_h = rot_right.size
             rr_nw = max(1, int(rr_w * ball_target / rr_h))
             rr_nh = max(1, ball_target)
-            self.img_ball_rot_right = pil_to_pygame(rot_right.resize((rr_nw, rr_nh)))
+            self.img_ball_rot_right = pil_to_texture(rot_right.resize((rr_nw, rr_nh)))
 
             self._spin_lift = max(2, int(ball_target * 0.35))
 
@@ -174,26 +183,24 @@ class CourtBase:
 
         self._prepared_size = key
 
-    def draw(self, surface, cx, cy, court_w, court_h):
+    def draw(self, painter, cx, cy, court_w, court_h):
         self.prepare(court_w, court_h)
         sky_h = self._sky_h
 
-        pygame.draw.rect(surface, (66, 170, 255), (cx, cy, court_w, sky_h))
-        pygame.draw.rect(surface, (209, 106, 32), (cx, cy + sky_h, court_w, court_h - sky_h))
+        painter.rect(cx, cy, court_w, sky_h, (66, 170, 255))
+        painter.rect(cx, cy + sky_h, court_w, court_h - sky_h, (209, 106, 32))
 
         if self.img_basket:
-            surface.blit(self.img_basket,
-                         (cx + self._basket_left_x, cy + sky_h - self.basket_h))
+            painter.image(self.img_basket,
+                          cx + self._basket_left_x, cy + sky_h - self.basket_h)
 
         man_base_y = cy + sky_h - self.man_h
         man_draw_y = man_base_y + int(self._man_offset_y)
 
         if self.state in ("jumping_up", "jumping_down") and self.img_man_jump:
-            surface.blit(self.img_man_jump, (cx + self._man_x, man_draw_y))
-        elif self._use_idle_ball_man and self.img_man and self.state == "idle":
-            surface.blit(self.img_man, (cx + self._man_x, man_draw_y))
-        elif self.img_man:
-            surface.blit(self.img_man, (cx + self._man_x, man_draw_y))
+            painter.image(self.img_man_jump, cx + self._man_x, man_draw_y)
+        else:
+            painter.image(self.img_man, cx + self._man_x, man_draw_y)
 
         if self.state == "idle":
             self.ball_x = float(self._rest_x)
@@ -204,8 +211,7 @@ class CourtBase:
             ball_draw_y = cy + int(self._rest_y) + int(self._man_offset_y)
 
         if self.img_ball:
-            bw = self.img_ball.get_width()
-            bh = self.img_ball.get_height()
+            bw, bh = self.img_ball.width, self.img_ball.height
             if self._use_idle_ball_man and self.state == "idle":
                 self._spin_frame += 1
                 if self._spin_frame % 6 < 2:
@@ -216,15 +222,14 @@ class CourtBase:
                     ball_img = self.img_ball
                 if ball_img is None:
                     ball_img = self.img_ball
-                bw = ball_img.get_width()
-                bh = ball_img.get_height()
-                surface.blit(ball_img,
-                             (cx + int(self.ball_x) - bw // 2,
-                              ball_draw_y - self._spin_lift - bh // 2))
+                bw, bh = ball_img.width, ball_img.height
+                painter.image(ball_img,
+                              cx + int(self.ball_x) - bw // 2,
+                              ball_draw_y - self._spin_lift - bh // 2)
             else:
-                surface.blit(self.img_ball,
-                             (cx + int(self.ball_x) - bw // 2,
-                              ball_draw_y - bh // 2))
+                painter.image(self.img_ball,
+                              cx + int(self.ball_x) - bw // 2,
+                              ball_draw_y - bh // 2)
 
     def start_animation(self, court_w, court_h):
         self.prepare(court_w, court_h)
@@ -345,7 +350,7 @@ class CourtBase:
                     self.flight_vx = -abs(self.flight_vx) * 0.5
 
                 if (self.flight_vx > 0 and
-                    self.ball_x + self.ball_r >= self._backboard_x):
+                        self.ball_x + self.ball_r >= self._backboard_x):
                     self.ball_x = float(self._backboard_x - self.ball_r)
                     self.flight_vx = -abs(self.flight_vx) * 0.6
                     self.flight_vy *= 0.8
