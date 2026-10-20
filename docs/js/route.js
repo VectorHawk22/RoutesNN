@@ -75,7 +75,7 @@ function renderRoute(route, geo) {
   renderGallery(route.photos || []);
 
   // Карта
-  const map = L.map('route-map', { scrollWheelZoom: true }).setView([56.30, 43.95], 13);
+  const map = L.map('route-map',{zoomControl: true}, { scrollWheelZoom: true }).setView([56.30, 43.95], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
