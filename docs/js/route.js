@@ -33,9 +33,9 @@ async function init() {
     if (!geoResponse.ok) throw new Error('geometry: ' + geoResponse.status);
     const geo = await geoResponse.json();
 
-    renderRoute(route, geo);
     document.getElementById('route-loading').hidden = true;
     document.getElementById('route-content').hidden = false;
+    renderRoute(route, geo);
   } catch (err) {
     console.error(err);
     document.getElementById('route-loading').textContent =
@@ -75,7 +75,7 @@ function renderRoute(route, geo) {
   renderGallery(route.photos || []);
 
   // Карта
-  const map = L.map('route-map',{zoomControl: true}, { scrollWheelZoom: true }).setView([56.30, 43.95], 13);
+  const map = L.map('route-map', { zoomControl: true, scrollWheelZoom: true }).setView([56.30, 43.95], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
